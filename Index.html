@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tickets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --orange-50:#FFF7ED; --orange-100:#FFEDD5; --orange-200:#FED7AA; --orange-300:#FDBA74;
+  --orange-400:#FB923C; --orange-500:#F97316; --orange-600:#EA580C; --orange-700:#C2410C;
+  --orange-800:#9A3412; --orange-900:#7C2D12;
+  --white:#FFFFFF;
+  --gray-400:#94A3B8; --gray-500:#64748B; --gray-600:#475569; --gray-700:#334155; --gray-800:#1E293B;
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:20px;
+  --sh-sm:0 1px 3px rgba(124,45,18,.08),0 1px 2px rgba(124,45,18,.05);
+  --sh-md:0 4px 16px rgba(124,45,18,.10),0 2px 6px rgba(124,45,18,.06);
+  --sh-lg:0 12px 40px rgba(124,45,18,.18);
+  --sidebar-w:220px;
+}
+html,body { height:100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:14px; color:var(--gray-800); overflow:hidden; }
+body { display:flex; background:linear-gradient(135deg,#FFF7ED 0%,#FFEDD5 45%,#FED7AA 100%); }
+
+/* ── SIDEBAR ── */
+.sidebar { width:var(--sidebar-w); flex-shrink:0; height:100vh; background:linear-gradient(180deg,#7C2D12 0%,#C2410C 100%); display:flex; flex-direction:column; padding:28px 0 20px; box-shadow:4px 0 24px rgba(124,45,18,.25); z-index:10; transition:width .28s cubic-bezier(.4,0,.2,1); overflow:hidden; }
+.sidebar.collapsed { width:0; padding-left:0; padding-right:0; }
+.sidebar-logo { padding:0 20px 28px; border-bottom:1px solid rgba(255,255,255,.12); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; white-space:nowrap; }
+.sidebar-logo span { font-size:20px; font-weight:700; color:#fff; letter-spacing:-.02em; }
+.sidebar-logo span b { color:var(--orange-300); }
+.sidebar-logo .logo-toggle { color:rgba(255,255,255,.6); transition:color .15s; flex-shrink:0; }
+.sidebar-logo:hover .logo-toggle { color:#fff; }
+/* hamburger button shown when sidebar is collapsed */
+.sidebar-open-btn { display:none; position:fixed; top:18px; left:14px; z-index:20; background:var(--orange-600); border:none; border-radius:8px; padding:8px; cursor:pointer; box-shadow:var(--sh-md); }
+.sidebar-open-btn.visible { display:flex; }
+.sidebar-open-btn svg { display:block; }
+.nav-item { display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer; user-select:none; color:rgba(255,255,255,.65); font-size:13px; font-weight:500; transition:background .15s,color .15s; border-left:3px solid transparent; margin:1px 0; }
+.nav-item svg { flex-shrink:0; opacity:.7; transition:opacity .15s; }
+.nav-item:hover { background:rgba(255,255,255,.08); color:#fff; }
+.nav-item:hover svg { opacity:1; }
+.nav-item.active { background:rgba(255,255,255,.14); color:#fff; border-left-color:var(--orange-300); }
+.nav-item.active svg { opacity:1; }
+.sidebar-footer { margin-top:auto; padding:16px 20px 0; border-top:1px solid rgba(255,255,255,.12); }
+.sidebar-footer small { font-size:11px; color:rgba(255,255,255,.35); }
+.hist-badge { background:rgba(255,255,255,.18); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; margin-left:auto; }
+
+/* ── MAIN ── */
+.main { flex:1; height:100vh; overflow-y:auto; padding:24px 24px 32px; min-width:0; }
+
+/* ── HEADER ── */
+.page-header { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; margin-bottom:18px; gap:12px; }
+.page-header h1 { font-size:22px; font-weight:700; color:var(--orange-900); letter-spacing:-.02em; text-align:center; grid-column:2; }
+.page-header h1 span { color:var(--orange-500); }
+.page-header .btn-add { grid-column:3; justify-self:end; }
+.btn-add { display:flex; align-items:center; gap:7px; background:var(--orange-600); color:#fff; border:none; border-radius:var(--r-md); padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(234,88,12,.35); transition:background .15s,transform .1s; font-family:inherit; }
+.btn-add:hover { background:var(--orange-700); transform:translateY(-1px); }
+
+/* ── STATS ── */
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:16px; }
+.stat-btn { background:var(--white); border-radius:var(--r-lg); padding:12px 16px; box-shadow:var(--sh-sm); border:2px solid transparent; display:flex; flex-direction:column; gap:4px; cursor:pointer; position:relative; overflow:hidden; transition:border-color .15s,box-shadow .15s,transform .1s; font-family:inherit; }
+.stat-btn::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:var(--bar,var(--orange-400)); }
+.stat-btn:hover { box-shadow:var(--sh-md); transform:translateY(-1px); }
+.stat-btn.active { border-color:var(--bar,var(--orange-400)); }
+.stat-btn.red  { --bar:#EF4444; } .stat-btn.amber { --bar:#F59E0B; } .stat-btn.green { --bar:#10B981; } .stat-btn.blue { --bar:var(--orange-500); } .stat-btn.gray { --bar:#94A3B8; }
+.stat-label { font-size:11px; font-weight:600; color:var(--gray-400); text-transform:uppercase; letter-spacing:.06em; }
+.stat-value { font-size:26px; font-weight:700; line-height:1; color:var(--gray-800); }
+.stat-btn.red .stat-value { color:#DC2626; } .stat-btn.amber .stat-value { color:#D97706; } .stat-btn.green .stat-value { color:#059669; }
+
+/* ── CONTROLS ── */
+.controls { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; background:var(--white); padding:10px 14px; border-radius:var(--r-lg); border:1px solid var(--orange-100); box-shadow:var(--sh-sm); }
+.search-wrap { flex:1; min-width:160px; position:relative; }
+.search-wrap svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--gray-400); pointer-events:none; }
+.controls input[type="text"] { width:100%; padding:7px 9px 7px 32px; border:1px solid var(--orange-200); border-radius:var(--r-sm); font-size:12px; color:var(--gray-800); outline:none; background:var(--orange-50); transition:border .15s; font-family:inherit; }
+.controls input[type="text"]:focus { border-color:var(--orange-400); background:var(--white); }
+.date-filter-wrap { display:flex; align-items:center; gap:4px; }
+.date-filter-wrap label { font-size:11px; color:var(--gray-400); white-space:nowrap; }
+.controls input[type="date"] { padding:6px 8px; border:1px solid var(--orange-200); border-radius:var(--r-sm); font-size:12px; color:var(--gray-700); background:var(--orange-50); outline:none; font-family:inherit; cursor:pointer; transition:border .15s; }
+.controls input[type="date"]:focus { border-color:var(--orange-400); background:var(--white); }
+.btn-clear-dates { padding:5px 9px; border:1px solid var(--orange-200); border-radius:var(--r-sm); font-size:11px; color:var(--orange-700); background:var(--orange-50); cursor:pointer; white-space:nowrap; font-family:inherit; }
+.btn-clear-dates:hover { background:var(--orange-100); }
+.controls select { padding:7px 10px; border:1px solid var(--orange-200); border-radius:var(--r-sm); font-size:12px; color:var(--gray-700); background:var(--orange-50); outline:none; font-family:inherit; cursor:pointer; transition:border .15s; }
+.controls select:focus { border-color:var(--orange-400); background:var(--white); }
+
+/* ── TABLE ── */
+.table-card { background:var(--white); border-radius:var(--r-xl); box-shadow:var(--sh-md); border:1px solid var(--orange-100); overflow:auto; max-height:calc(100vh - 280px); }
+table { width:100%; border-collapse:collapse; font-size:12px; min-width:900px; }
+thead { background:linear-gradient(90deg,#7C2D12 0%,#C2410C 100%); position:sticky; top:0; z-index:2; }
+th { padding:11px 12px; text-align:left; font-size:10px; font-weight:700; color:rgba(255,255,255,.85); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; }
+tbody tr { border-bottom:1px solid var(--orange-50); transition:background .1s; cursor:pointer; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:var(--orange-50); }
+tbody tr.is-bug { background:rgba(254,226,226,.15); }
+td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
+.td-desc { max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.client-id { font-family:'SF Mono','Fira Code',monospace; font-size:11px; background:var(--orange-50); color:var(--orange-700); padding:2px 6px; border-radius:4px; border:1px solid var(--orange-200); white-space:nowrap; }
+.order-id { font-family:'SF Mono','Fira Code',monospace; font-size:11px; color:var(--gray-500); white-space:nowrap; }
+.member-pill { font-family:'SF Mono','Fira Code',monospace; font-size:11px; font-weight:700; background:#F0FDF4; color:#166534; border:1px solid #BBF7D0; padding:2px 7px; border-radius:20px; white-space:nowrap; }
+
+/* ── BADGES ── */
+.badge { display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+.b-open   { background:#FEE2E2; color:#991B1B; }
+.b-inprog { background:#FEF3C7; color:#92400E; }
+.b-closed { background:#D1FAE5; color:#065F46; }
+.b-bug    { background:#FEE2E2; color:#991B1B; }
+.b-bug-solved   { background:#DBEAFE; color:#1E40AF; }
+.b-man-cleared  { background:#FEF3C7; color:#92400E; }
+.b-err    { background:#EDE9FE; color:#5B21B6; font-size:10px; }
+.b-exch   { background:#E0F2FE; color:#0369A1; font-size:10px; }
+.b-sol-perm { background:#ECFDF5; color:#065F46; }
+.b-sol-temp { background:#FEF3C7; color:#92400E; }
+.b-sol-mon  { background:#FFF7ED; color:#9A3412; }
+.b-sol-enh  { background:#F5F3FF; color:#5B21B6; }
+.b-sol-dev  { background:#FEF9C3; color:#854D0E; }
+
+/* ── REPORTS ── */
+.rpt-card { background:#fff;border-radius:12px;padding:18px 20px;box-shadow:var(--sh-sm);border:1px solid var(--orange-100); }
+.rpt-card-title { font-size:13px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px; }
+.rpt-range-btn { background:transparent;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--gray-500);transition:all .15s; }
+.rpt-range-btn.active { background:#EA580C;color:#fff; }
+.rpt-stat-card { background:#fff;border-radius:12px;padding:14px 18px;box-shadow:var(--sh-sm);border:1px solid var(--orange-100); }
+.rpt-stat-label { font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em; }
+.rpt-stat-value { font-size:28px;font-weight:700;color:var(--gray-800);line-height:1.2;margin-top:4px; }
+.rpt-stat-sub { font-size:11px;color:var(--gray-400);margin-top:2px; }
+.rpt-agent-row td { padding:10px 12px;border-bottom:1px solid var(--orange-50); }
+.rpt-agent-row:last-child td { border-bottom:none; }
+.rpt-error-bar { height:8px;border-radius:4px;background:var(--orange-400);transition:width .3s; }
+@media print {
+  .sidebar, #rpt-custom-range, button { display:none !important; }
+  .rpt-card { box-shadow:none !important;border:1px solid #ddd !important; }
+  body { background:#fff !important; }
+  #reports-panel { display:block !important; }
+}
+.err-tags { display:flex; flex-wrap:wrap; gap:3px; }
+
+/* ── ACTION BUTTONS ── */
+.action-group { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+.btn-action { font-size:11px; font-weight:600; padding:4px 9px; border-radius:var(--r-sm); border:1px solid transparent; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:3px; white-space:nowrap; font-family:inherit; }
+.btn-solve  { background:#ECFDF5; color:#065F46; border-color:#A7F3D0; }
+.btn-solve:hover  { background:#D1FAE5; }
+.btn-bug { background:#FFF1F2; color:#BE123C; border-color:#FECDD3; }
+.btn-bug:hover { background:#FFE4E6; }
+.btn-start  { background:var(--orange-50); color:var(--orange-700); border-color:var(--orange-200); }
+.btn-start:hover  { background:var(--orange-100); }
+
+.empty-state { text-align:center; padding:48px 20px; color:var(--gray-400); }
+.empty-state p { font-size:14px; font-weight:500; margin-top:10px; }
+.empty-state small { font-size:12px; }
+
+/* ── MODALS ── */
+.overlay { display:none; position:fixed; inset:0; z-index:500; background:rgba(15,23,42,.45); backdrop-filter:blur(6px); align-items:center; justify-content:center; }
+.overlay.open { display:flex; }
+.modal-box { background:var(--white); border-radius:var(--r-xl); box-shadow:var(--sh-lg); width:560px; max-width:96vw; border:1px solid var(--orange-100); animation:pop .18s ease; max-height:92vh; display:flex; flex-direction:column; }
+.modal-box.wide { width:640px; }
+@keyframes pop { from{transform:scale(.95);opacity:0} to{transform:scale(1);opacity:1} }
+.modal-header { padding:16px 20px 13px; border-bottom:1px solid var(--orange-100); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.modal-header h3 { font-size:15px; font-weight:600; color:var(--orange-900); }
+.modal-header .sub { font-size:11px; color:var(--gray-500); margin-top:2px; }
+.btn-close-modal { background:none; border:none; cursor:pointer; color:var(--gray-400); font-size:18px; line-height:1; padding:4px; }
+.btn-close-modal:hover { color:var(--gray-700); }
+.modal-body { padding:16px 20px; overflow-y:auto; flex:1; }
+.modal-footer { padding:12px 20px 16px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--orange-100); flex-shrink:0; }
+
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--orange-50); border-radius:var(--r-md); padding:12px; margin-bottom:14px; border:1px solid var(--orange-100); }
+.info-item label { display:block; font-size:10px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; }
+.info-item p { font-size:13px; color:var(--gray-800); font-weight:500; }
+.info-item.full { grid-column:1/-1; }
+
+.form-label { font-size:12px; font-weight:600; color:var(--gray-600); margin-bottom:5px; display:block; }
+.form-group { margin-bottom:12px; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.modal-body input[type="text"], .modal-body select, .modal-body textarea { width:100%; border:1px solid var(--orange-200); border-radius:var(--r-sm); padding:8px 10px; font-size:13px; color:var(--gray-800); font-family:inherit; background:var(--orange-50); outline:none; transition:border .15s,box-shadow .15s; }
+.modal-body textarea { resize:vertical; min-height:65px; }
+.modal-body input:focus,.modal-body select:focus,.modal-body textarea:focus { border-color:var(--orange-400); box-shadow:0 0 0 3px rgba(251,146,60,.2); background:var(--white); }
+
+.btn-cancel-modal { padding:8px 16px; border-radius:var(--r-md); font-size:13px; font-weight:600; border:1px solid var(--orange-200); background:var(--white); color:var(--gray-600); cursor:pointer; font-family:inherit; transition:background .15s; }
+.btn-cancel-modal:hover { background:var(--orange-50); }
+.btn-confirm { padding:8px 18px; border-radius:var(--r-md); font-size:13px; font-weight:600; border:none; cursor:pointer; font-family:inherit; transition:background .15s; color:#fff; }
+.btn-confirm.green { background:#059669; box-shadow:0 2px 8px rgba(5,150,105,.3); }
+.btn-confirm.green:hover { background:#047857; }
+.btn-confirm.red { background:#DC2626; box-shadow:0 2px 8px rgba(220,38,38,.3); }
+.btn-confirm.red:hover { background:#B91C1C; }
+.btn-confirm.amber { background:#D97706; box-shadow:0 2px 8px rgba(217,119,6,.3); }
+.btn-confirm.amber:hover { background:#B45309; }
+.btn-confirm.blue { background:var(--orange-600); box-shadow:0 2px 8px rgba(234,88,12,.3); }
+.btn-confirm.blue:hover { background:var(--orange-700); }
+
+/* ── BUG SUB-TABS ── */
+.bug-tabs { display:none; gap:6px; margin-bottom:12px; }
+.bug-tabs.visible { display:flex; }
+.bug-tab { padding:6px 16px; border-radius:20px; font-size:12px; font-weight:600; border:1.5px solid var(--orange-200); background:var(--white); color:var(--gray-600); cursor:pointer; transition:all .15s; font-family:inherit; }
+.bug-tab:hover { background:var(--orange-50); border-color:var(--orange-400); color:var(--orange-700); }
+.bug-tab.active { background:var(--orange-700); border-color:var(--orange-700); color:#fff; }
+.bug-tab .tab-count { display:inline-block; background:rgba(255,255,255,.25); color:inherit; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:5px; }
+.bug-tab:not(.active) .tab-count { background:var(--orange-100); color:var(--orange-600); }
+
+/* ── PRIORITY BADGES ── */
+.b-pri-high { background:#FEE2E2; color:#991B1B; }
+.b-pri-med  { background:#FEF3C7; color:#92400E; }
+.b-pri-low  { background:#ECFDF5; color:#065F46; }
+.pri-select { padding:3px 6px; border:1px solid var(--orange-200); border-radius:6px; font-size:11px; color:var(--gray-700); background:var(--orange-50); font-family:inherit; cursor:pointer; max-width:105px; }
+
+/* ── FILE UPLOAD ── */
+.upload-zone { border:2px dashed var(--orange-200); border-radius:var(--r-md); padding:14px; text-align:center; background:var(--orange-50); cursor:pointer; transition:border-color .15s,background .15s; position:relative; }
+.upload-zone:hover, .upload-zone.drag-over { border-color:var(--orange-500); background:var(--orange-100); }
+.upload-zone input[type="file"] { display:none; }
+.upload-zone .uz-icon { color:var(--orange-400); margin-bottom:4px; }
+.upload-zone .uz-text { font-size:12px; color:var(--gray-500); }
+.upload-zone .uz-text b { color:var(--orange-600); }
+/* pending files grid */
+.pending-files { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.pf-card { position:relative; width:80px; flex-shrink:0; }
+.pf-thumb { width:80px; height:80px; object-fit:cover; border-radius:6px; border:1px solid var(--orange-200); background:var(--orange-50); display:block; }
+.pf-thumb-video { width:80px; height:80px; border-radius:6px; border:1px solid var(--orange-200); background:var(--gray-700); display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; }
+.pf-name { font-size:10px; color:var(--gray-600); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80px; }
+.pf-remove { position:absolute; top:-5px; right:-5px; width:18px; height:18px; border-radius:50%; background:#DC2626; color:#fff; border:none; cursor:pointer; font-size:12px; line-height:1; display:flex; align-items:center; justify-content:center; }
+/* attachment grid in ticket view */
+.att-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
+.att-thumb-wrap { cursor:zoom-in; }
+.att-thumb-wrap img { width:110px; height:110px; object-fit:cover; border-radius:8px; border:1px solid var(--orange-200); display:block; }
+.att-thumb-wrap video { width:110px; height:110px; object-fit:cover; border-radius:8px; border:1px solid var(--orange-200); display:block; }
+.att-lightbox { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:9999; display:flex; align-items:center; justify-content:center; cursor:zoom-out; }
+.att-lightbox img, .att-lightbox video { max-width:90vw; max-height:90vh; border-radius:10px; }
+.btn-clear-file { background:none; border:none; color:var(--gray-400); cursor:pointer; font-size:15px; line-height:1; padding:0 2px; }
+.btn-clear-file:hover { color:#DC2626; }
+
+/* multi CID rows */
+.cid-row { display:flex; gap:6px; margin-bottom:6px; align-items:center; }
+.cid-row input { flex:1; }
+.btn-remove-cid { background:none; border:1px solid #FECDD3; border-radius:6px; color:#BE123C; font-size:14px; line-height:1; width:28px; height:28px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:background .15s; }
+.btn-remove-cid:hover { background:#FFF1F2; }
+.btn-add-cid { display:inline-flex; align-items:center; gap:5px; margin-top:2px; padding:5px 12px; border-radius:6px; border:1px dashed var(--orange-300); background:var(--orange-50); color:var(--orange-700); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s; }
+.btn-add-cid:hover { background:var(--orange-100); }
+
+/* multi checkboxes */
+.multi-check-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; background:var(--orange-50); border:1px solid var(--orange-200); border-radius:var(--r-sm); padding:10px; max-height:160px; overflow-y:auto; }
+.check-item { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--gray-700); cursor:pointer; padding:2px 0; }
+.check-item input[type="checkbox"] { accent-color:var(--orange-600); width:13px; height:13px; cursor:pointer; flex-shrink:0; }
+
+/* description thread */
+.desc-thread { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.desc-entry { background:var(--orange-50); border:1px solid var(--orange-100); border-radius:var(--r-md); padding:10px 12px; }
+.desc-entry .de-meta { font-size:10px; color:var(--gray-400); font-weight:600; margin-bottom:5px; display:flex; align-items:center; gap:6px; }
+.desc-entry .de-meta span { background:var(--orange-100); color:var(--orange-700); padding:1px 6px; border-radius:10px; font-weight:700; }
+.desc-entry .de-text { font-size:13px; color:var(--gray-700); line-height:1.55; }
+.add-desc-wrap { display:flex; gap:8px; align-items:flex-end; }
+.add-desc-wrap textarea { flex:1; min-height:55px; }
+.btn-add-note { padding:8px 14px; border-radius:var(--r-md); font-size:12px; font-weight:600; border:none; background:var(--orange-600); color:#fff; cursor:pointer; font-family:inherit; white-space:nowrap; transition:background .15s; }
+.btn-add-note:hover { background:var(--orange-700); }
+
+/* bug match notice */
+.bug-notice { background:#FEF3C7; border:1px solid #FDE68A; border-radius:var(--r-sm); padding:10px 12px; font-size:12px; color:#92400E; margin-bottom:10px; display:none; }
+.bug-notice.show { display:block; }
+
+/* view modal action row */
+.view-actions { display:flex; gap:8px; flex-wrap:wrap; padding:12px 20px; border-top:1px solid var(--orange-100); flex-shrink:0; align-items:center; }
+.view-actions-label { font-size:11px; font-weight:600; color:var(--gray-400); text-transform:uppercase; letter-spacing:.06em; margin-right:4px; }
+
+/* solution type in action modal */
+.sol-select-wrap { margin-top:10px; }
+
+.toast { position:fixed; bottom:22px; right:22px; z-index:999; background:var(--gray-800); color:#fff; padding:10px 16px; border-radius:var(--r-md); font-size:13px; font-weight:500; box-shadow:var(--sh-lg); transform:translateY(16px); opacity:0; transition:all .25s; pointer-events:none; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.success { background:#065F46; }
+
+@media(max-width:900px) { .stats{grid-template-columns:repeat(2,1fr);} }
+.stat-btn.plain { cursor:default; }
+.stat-btn.plain:hover { box-shadow:var(--sh-sm); transform:none; }
+
+/* ── LOGIN ── */
+.login-overlay { position:fixed; inset:0; z-index:9999; background:linear-gradient(135deg,#FFF7ED 0%,#FFEDD5 45%,#FED7AA 100%); display:flex; align-items:center; justify-content:center; }
+.login-card { background:#fff; border-radius:20px; box-shadow:0 12px 40px rgba(124,45,18,.18); width:400px; max-width:94vw; padding:40px 36px; border:1px solid #FED7AA; }
+.login-logo { font-size:28px; font-weight:700; color:#7C2D12; letter-spacing:-.02em; margin-bottom:6px; }
+.login-logo b { color:#EA580C; }
+.login-sub { font-size:13px; color:#94A3B8; margin-bottom:28px; }
+.login-field { margin-bottom:16px; }
+.login-field label { display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:6px; }
+.login-field input { width:100%; border:1px solid #FED7AA; border-radius:8px; padding:10px 12px; font-size:14px; font-family:inherit; outline:none; background:#FFF7ED; transition:border .15s,box-shadow .15s; }
+.login-field input:focus { border-color:#FB923C; box-shadow:0 0 0 3px rgba(251,146,60,.2); background:#fff; }
+.btn-login { width:100%; padding:11px; border-radius:10px; border:none; background:#EA580C; color:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s; margin-top:4px; }
+.btn-login:hover { background:#C2410C; }
+.login-error { color:#DC2626; font-size:12px; margin-top:10px; display:none; text-align:center; font-weight:500; }
+.login-error.show { display:block; }
+
+/* ── AGENTS VIEW ── */
+.agents-table { width:100%; border-collapse:collapse; font-size:13px; }
+.agents-table th { padding:10px 14px; text-align:left; font-size:11px; font-weight:700; color:rgba(255,255,255,.85); text-transform:uppercase; letter-spacing:.06em; }
+.agents-table td { padding:10px 14px; border-bottom:1px solid #FFF7ED; color:#334155; }
+.agents-table tr:hover td { background:#FFF7ED; }
+.agent-role-pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; }
+.agent-role-pill.superadmin { background:#FEF3C7; color:#92400E; }
+.agent-role-pill.agent { background:#FFEDD5; color:#C2410C; }
+.btn-del-agent { font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px; border:1px solid #FECDD3; background:#FFF1F2; color:#BE123C; cursor:pointer; font-family:inherit; transition:background .15s; }
+.btn-del-agent:hover { background:#FFE4E6; }
+.btn-deact-agent { font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px; border:1px solid var(--orange-200); background:var(--orange-50); color:var(--orange-700); cursor:pointer; font-family:inherit; transition:background .15s; }
+.btn-deact-agent:hover { background:var(--orange-100); }
+.btn-deact-agent.reactivate { border-color:#BBF7D0; background:#F0FDF4; color:#166534; }
+.btn-deact-agent.reactivate:hover { background:#DCFCE7; }
+.agent-status-pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.agent-status-pill.active { background:#DCFCE7; color:#166534; }
+.agent-status-pill.inactive { background:#FEE2E2; color:#991B1B; }
+.perm-tag { display:inline-block; font-size:10px; font-weight:600; padding:1px 7px; border-radius:10px; background:var(--orange-100); color:var(--orange-700); margin:1px 2px; }
+.perm-tag.perm-all { background:#DBEAFE; color:#1E40AF; }
+.perm-check-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
+.perm-check-row label { display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; color:#334155; }
+.a-companies-scroll { max-height:120px; overflow-y:auto; border:1px solid var(--orange-200); border-radius:6px; padding:8px 10px; background:var(--orange-50); display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+.modal-body input[type="password"] { width:100%; border:1px solid var(--orange-200); border-radius:var(--r-sm); padding:8px 10px; font-size:13px; color:#1E293B; font-family:inherit; background:var(--orange-50); outline:none; transition:border .15s,box-shadow .15s; }
+.modal-body input[type="password"]:focus { border-color:var(--orange-400); box-shadow:0 0 0 3px rgba(251,146,60,.2); background:#fff; }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN OVERLAY ══ -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">Ticket<b>s</b></div>
+    <div class="login-sub">Sign in to your workspace</div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="login-user" placeholder="Enter username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="login-error">Invalid username or password.</div>
+  </div>
+</div>
+
+<!-- hamburger to re-open sidebar -->
+<button class="sidebar-open-btn" id="sidebar-open-btn" onclick="toggleSidebar()" title="Open menu">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo" onclick="toggleSidebar()" title="Collapse menu">
+    <span>Ticket<b>s</b></span>
+    <svg class="logo-toggle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </div>
+  <nav>
+    <div class="nav-item active" id="nav-dashboard" onclick="switchView('dashboard')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" id="nav-history" onclick="switchView('history')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </div>
+    <div class="nav-item" id="nav-bugs" onclick="switchView('bugs')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.5 1.5"/><path d="M14.5 3.5L16 2"/><path d="M9 7.5A5 5 0 0 0 4 12v1a8 8 0 0 0 16 0v-1a5 5 0 0 0-5-4.5z"/><path d="M3.5 9.5l1.5 1"/><path d="M19 10.5l1.5-1"/><path d="M4 16.5l1.5-.5"/><path d="M18.5 16l1.5.5"/><line x1="12" y1="7" x2="12" y2="3"/></svg>
+      Bugs
+    </div>
+    <div class="nav-item" id="nav-reports" onclick="switchView('reports')" style="display:none">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><path d="M2 20h20"/></svg>
+      Reports
+    </div>
+    <div class="nav-item" id="nav-agents" onclick="switchView('agents')" style="display:none">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Agents
+    </div>
+    <div class="nav-item" id="nav-companies" onclick="switchView('companies')" style="display:none">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      Companies
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <div>
+      <small id="footer-username" style="color:rgba(255,255,255,.7);font-weight:600;font-size:11px"></small><br>
+      <small style="color:rgba(255,255,255,.35)">v9.9.9 · Tickets</small>
+    </div>
+    <button onclick="doLogout()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:rgba(255,255,255,.7);font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap" title="Sign out">Sign Out</button>
+  </div>
+</div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="page-header">
+    <h1 id="view-title">Dashboard <span>· Open Tickets</span></h1>
+    <button class="btn-add" id="btn-create-ticket" onclick="openNew()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Create Ticket
+    </button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats" id="stats-grid"></div>
+
+  <!-- BUG SUB-TABS -->
+  <div class="bug-tabs" id="bug-tabs">
+    <button class="bug-tab active" id="btab-all"    onclick="setBugTab('active')">Active Bugs <span class="tab-count" id="btab-cnt-all">0</span></button>
+    <button class="bug-tab"        id="btab-solved" onclick="setBugTab('solved')">✅ Solved Bugs <span class="tab-count" id="btab-cnt-solved">0</span></button>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search" placeholder="Search tickets…" oninput="render()">
+    </div>
+    <select id="f-status" onchange="render()">
+      <option value="">Status</option>
+      <option value="open">Open</option>
+      <option value="in-progress">In Process</option>
+      <option value="closed">Closed</option>
+    </select>
+    <select id="f-error" onchange="render()">
+      <option value="">Error Type</option>
+      <option>2FA</option><option>Chart</option><option>Close Position</option>
+      <option>Corporate Action</option><option>Deposit</option><option>Funds</option>
+      <option>Liquidation</option><option>Login Error</option><option>Margin (MTM)</option>
+      <option>Open Position</option><option>Option Chain</option><option>OTP</option>
+      <option>Order Execution</option><option>Reports</option><option>Wallet Not Found</option>
+      <option>Watchlist</option><option>Web Page</option><option>Withdraw</option><option>Wrong Price</option>
+    </select>
+    <select id="f-exchange" onchange="render()">
+      <option value="">Exchange</option>
+      <option>Cash</option><option>Commodities</option><option>Crypto</option>
+      <option>Derivatives</option><option>Forex</option>
+    </select>
+    <select id="f-member" onchange="render()">
+      <option value="">Member ID</option>
+      <option>151</option><option>159</option><option>160</option><option>161</option>
+      <option>162</option><option>163</option><option>164</option><option>165</option>
+    </select>
+    <div class="date-filter-wrap">
+      <label>From</label>
+      <input type="date" id="f-date-from" onchange="render()">
+    </div>
+    <div class="date-filter-wrap">
+      <label>To</label>
+      <input type="date" id="f-date-to" onchange="render()">
+    </div>
+    <button class="btn-clear-dates" onclick="clearDateFilter()" title="Clear date filter">✕ Date</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-card">
+    <table id="main-table">
+      <thead id="thead-row"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- COMPANIES VIEW PANEL -->
+  <div id="companies-panel" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:13px;color:#64748B">Member ID management</div>
+      <button class="btn-add" onclick="openAddCompany()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Company
+      </button>
+    </div>
+    <div class="table-card" style="max-height:calc(100vh - 220px); max-width:520px">
+      <table class="agents-table">
+        <thead><tr>
+          <th style="width:40%">Member ID</th>
+          <th style="width:40%">Company Name</th>
+          <th style="width:20%">Action</th>
+        </tr></thead>
+        <tbody id="companies-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- REPORTS VIEW PANEL -->
+  <div id="reports-panel" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--gray-800)">Reports & Analytics</div>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:2px">Overview of ticket activity and agent performance</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;gap:4px;background:#FFF7ED;border:1px solid var(--orange-200);border-radius:8px;padding:3px">
+          <button class="rpt-range-btn active" id="rpt-week" onclick="setReportRange('week')">This Week</button>
+          <button class="rpt-range-btn" id="rpt-month" onclick="setReportRange('month')">This Month</button>
+          <button class="rpt-range-btn" id="rpt-custom" onclick="setReportRange('custom')">Custom</button>
+        </div>
+        <div id="rpt-custom-range" style="display:none;gap:6px;align-items:center;display:none">
+          <input type="date" id="rpt-from" onchange="renderReports()" style="border:1px solid var(--orange-200);border-radius:6px;padding:5px 8px;font-size:12px;font-family:inherit;background:#FFF7ED">
+          <span style="font-size:12px;color:var(--gray-400)">to</span>
+          <input type="date" id="rpt-to" onchange="renderReports()" style="border:1px solid var(--orange-200);border-radius:6px;padding:5px 8px;font-size:12px;font-family:inherit;background:#FFF7ED">
+        </div>
+        <button onclick="printReport()" style="background:#EA580C;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Export PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div id="rpt-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px"></div>
+
+    <!-- Charts Row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px" id="rpt-charts-row">
+      <div class="rpt-card">
+        <div class="rpt-card-title">Ticket Volume</div>
+        <canvas id="rpt-volume-chart" height="200"></canvas>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-title">Error Type Frequency</div>
+        <canvas id="rpt-error-chart" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Agent Performance -->
+    <div class="rpt-card" style="margin-bottom:24px">
+      <div class="rpt-card-title">Agent Performance</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--orange-50);border-bottom:2px solid var(--orange-200)">
+            <th style="padding:10px 12px;text-align:left;color:var(--gray-600);font-weight:600">Agent</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Total Handled</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Solved</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Bugs Reported</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Manually Cleared</th>
+            <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Avg Handle Time</th>
+          </tr>
+        </thead>
+        <tbody id="rpt-agent-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Top Errors Table -->
+    <div class="rpt-card">
+      <div class="rpt-card-title">Most Frequent Errors</div>
+      <div id="rpt-top-errors"></div>
+    </div>
+  </div>
+
+  <!-- AGENTS VIEW PANEL -->
+  <div id="agents-panel" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:13px;color:#64748B">Manage agent accounts. Only super admin can see this.</div>
+      <button class="btn-add" onclick="openAddAgent()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Agent
+      </button>
+    </div>
+    <div class="table-card" style="max-height:calc(100vh - 220px)">
+      <table class="agents-table">
+        <thead><tr>
+          <th>#</th><th>Username</th><th>Role</th><th>Status</th><th>Views</th><th>Companies</th><th>Created</th><th>Action</th>
+        </tr></thead>
+        <tbody id="agents-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- ══ TICKET VIEW MODAL ══ -->
+<div class="overlay" id="modal-view">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <div>
+        <h3 id="view-oid"></h3>
+        <div class="sub" id="view-sub"></div>
+      </div>
+      <button class="btn-close-modal" onclick="closeModal('modal-view')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-grid" id="view-meta"></div>
+      <div style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
+        <span class="form-label" style="margin:0">Error Types</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px" id="view-errtags"></div>
+      <div class="form-label">Description Thread</div>
+      <div class="desc-thread" id="view-desc-thread"></div>
+      <div id="view-attachment" style="display:none;margin-top:12px"></div>
+      <div class="add-desc-wrap">
+        <textarea id="new-desc-input" placeholder="Add a new note or update…"></textarea>
+        <button class="btn-add-note" onclick="addDescNote()">Add Note</button>
+      </div>
+    </div>
+    <!-- action buttons shown only in dashboard view -->
+    <div class="view-actions" id="view-action-bar">
+      <span class="view-actions-label">Actions:</span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-confirm blue" id="btn-view-submit" onclick="handleViewSubmit()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SUBMIT SOLUTION TYPE MODAL ══ -->
+<div class="overlay" id="modal-submit-sol">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Select Solution Type</h3>
+      <button class="btn-close-modal" onclick="closeModal('modal-submit-sol')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-grid" id="submit-sol-details"></div>
+      <div class="form-group" style="margin-top:4px">
+        <label class="form-label">Solution Type *</label>
+        <select id="submit-sol-type">
+          <option value="">— Select solution type —</option>
+          <option>Enhancement Required</option>
+          <option>Monitoring Required</option>
+          <option>Permanent Fix</option>
+          <option>Temporary Fix</option>
+          <option>Under Development</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel-modal" onclick="closeModal('modal-submit-sol')">Cancel</button>
+      <button class="btn-confirm green" onclick="confirmSubmitSol()">Confirm & Close Ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ACTION CONFIRM MODAL ══ -->
+<div class="overlay" id="modal-action">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="action-title">Resolve Ticket</h3>
+      <button class="btn-close-modal" onclick="closeModal('modal-action')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-grid" id="action-details"></div>
+
+      <!-- SOLVE section -->
+      <div id="sec-solve" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Solution Type *</label>
+          <select id="a-solution">
+            <option value="">— Select solution type —</option>
+            <option>Enhancement Required</option><option>Monitoring Required</option>
+            <option>Permanent Fix</option><option>Temporary Fix</option><option>Under Development</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Resolution Note</label>
+          <textarea id="a-resolve-note" placeholder="Describe how the issue was resolved…"></textarea>
+        </div>
+      </div>
+
+      <!-- NEW BUG section -->
+      <div id="sec-newbug" style="display:none">
+        <div class="bug-notice" id="bug-match-notice"></div>
+        <div class="form-group">
+          <label class="form-label">Bug Description</label>
+          <textarea id="a-bug-note" placeholder="Describe the new bug for tracking…"></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel-modal" onclick="closeModal('modal-action')">Cancel</button>
+      <button class="btn-confirm green" id="action-confirm-btn" onclick="confirmAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ NEW TICKET MODAL ══ -->
+<div class="overlay" id="modal-new">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <h3>Create New Ticket</h3>
+      <button class="btn-close-modal" onclick="closeModal('modal-new')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="two-col">
+        <div class="form-group" style="grid-column:1/-1">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <label class="form-label" style="margin:0">Client ID(s) *</label>
+            <button type="button" class="btn-add-cid" onclick="addCidRow()">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Client ID
+            </button>
+          </div>
+          <div id="cid-list">
+            <div class="cid-row"><input type="text" class="cid-input" placeholder="e.g. C-0099"></div>
+          </div>
+        </div>
+        <div class="form-group" id="n-member-group">
+          <label class="form-label" id="n-member-label">Member ID *</label>
+          <select id="n-member">
+            <option value="">— Select —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Exchange (optional)</label>
+          <select id="n-exchange">
+            <option value="">— None —</option>
+            <option>Cash</option><option>Commodities</option><option>Crypto</option>
+            <option>Derivatives</option><option>Forex</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <label class="form-label" style="margin:0">Error Type * (select one or more)</label>
+          <button type="button" onclick="toggleAddErrorType()" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid var(--orange-300);background:var(--orange-50);color:var(--orange-700);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Type
+          </button>
+        </div>
+        <div id="add-error-wrap" style="display:none;margin-bottom:8px">
+          <div style="display:flex;gap:6px">
+            <input type="text" id="new-error-input" placeholder="Enter new error type…" onkeydown="if(event.key==='Enter')addErrorType()" style="flex:1">
+            <button type="button" onclick="addErrorType()" style="padding:7px 14px;border-radius:6px;border:none;background:var(--orange-600);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">Add</button>
+          </div>
+        </div>
+        <div class="multi-check-grid" id="n-error-checks"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Description *</label><textarea id="n-desc" placeholder="Describe the issue…"></textarea></div>
+      <div class="form-group">
+        <label class="form-label">Attachments <span style="font-weight:400;color:var(--gray-400)">(optional — images or videos)</span></label>
+        <div class="upload-zone" id="upload-zone"
+          onclick="document.getElementById('n-file').click()"
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragenter="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('drag-over');handleDrop(event)">
+          <input type="file" id="n-file" accept="image/*,video/*" multiple onchange="handleFileSelect(this)" onclick="event.stopPropagation()" style="display:none">
+          <div class="uz-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="uz-text"><b>Click</b>, drag &amp; drop, or <b>Ctrl+V</b> to add files<br><span style="font-size:11px">PNG, JPG, GIF, MP4, MOV, WebM · Images 20 MB · Videos 100 MB</span></div>
+        </div>
+        <div class="pending-files" id="pending-files"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel-modal" onclick="closeModal('modal-new')">Cancel</button>
+      <button class="btn-confirm blue" onclick="addTicket()">Create Ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD COMPANY MODAL ══ -->
+<div class="overlay" id="modal-company">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Add Company</h3>
+      <button class="btn-close-modal" onclick="closeModal('modal-company')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Member ID * <span style="font-weight:400;color:var(--gray-400)">(unique number)</span></label><input type="text" id="c-mid" placeholder="e.g. 166"></div>
+      <div class="form-group"><label class="form-label">Company Name *</label><input type="text" id="c-name" placeholder="e.g. Acme Trading"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel-modal" onclick="closeModal('modal-company')">Cancel</button>
+      <button class="btn-confirm blue" onclick="confirmAddCompany()">Add Company</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD AGENT MODAL ══ -->
+<div class="overlay" id="modal-agent">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Add New Agent</h3>
+      <button class="btn-close-modal" onclick="closeModal('modal-agent')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Username *</label><input type="text" id="a-uname" placeholder="e.g. john_s" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Password *</label><input type="password" id="a-pass" placeholder="Set a password" autocomplete="new-password"></div>
+      <div class="form-group">
+        <label class="form-label">View Access</label>
+        <div class="perm-check-row">
+          <label><input type="checkbox" id="a-view-dashboard" checked> Dashboard</label>
+          <label><input type="checkbox" id="a-view-history" checked> History</label>
+          <label><input type="checkbox" id="a-view-bugs" checked> Bugs</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Allowed Companies <span style="font-weight:400;color:var(--gray-400)">(leave all unchecked = see all)</span></label>
+        <div class="a-companies-scroll" id="a-companies-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel-modal" onclick="closeModal('modal-agent')">Cancel</button>
+      <button class="btn-confirm blue" onclick="confirmAddAgent()">Create Agent</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EDIT AGENT MODAL ══ -->
+<div class="overlay" id="modal-edit-agent" onclick="if(event.target===this)closeModal('modal-edit-agent')">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3>Agent Profile — <span id="ea-title" style="color:var(--orange-600)"></span></h3>
+      <button class="btn-close-modal" onclick="closeModal('modal-edit-agent')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--orange-50);border-radius:8px;border:1px solid var(--orange-200)">
+        <span style="font-size:13px;font-weight:600;color:#334155">Account Status</span>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+          <span id="ea-status-label" style="color:var(--gray-500)">Active</span>
+          <div style="position:relative;width:40px;height:22px" onclick="toggleEaStatus()">
+            <input type="checkbox" id="ea-active" style="opacity:0;width:0;height:0;position:absolute">
+            <span id="ea-toggle-track" style="position:absolute;inset:0;border-radius:34px;background:#ccc;transition:.3s;cursor:pointer"></span>
+            <span id="ea-toggle-thumb" style="position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.3s;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span>
+          </div>
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="form-label">View Access</label>
+        <div class="perm-check-row">
+          <label><input type="checkbox" id="ea-view-dashboard"> Dashboard</label>
+          <label><input type="checkbox" id="ea-view-history"> History</label>
+          <label><input type="checkbox" id="ea-view-bugs"> Bugs</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Allowed Companies <span style="font-weight:400;color:var(--gray-400)">(unchecked = all)</span></label>
+        <div class="a-companies-scroll" id="ea-companies-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel-modal" onclick="closeModal('modal-edit-agent')">Cancel</button>
+      <button class="btn-confirm green" onclick="saveEditAgent()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SOLVE BUG MODAL ══ -->
+<div class="overlay" id="modal-solve-bug">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-header">
+      <h3 id="solve-bug-title">Mark Bug as Solved</h3>
+      <button class="btn-close-modal" onclick="closeModal('modal-solve-bug')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="solve-bug-errors" style="margin-bottom:12px"></div>
+      <div class="form-group">
+        <label class="form-label" id="solve-bug-note-label">How was it solved? *</label>
+        <textarea id="solve-bug-note" placeholder="Describe what caused this bug and how it was resolved…" style="min-height:100px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel-modal" onclick="closeModal('modal-solve-bug')">Cancel</button>
+      <button class="btn-confirm green" id="solve-bug-confirm-btn" onclick="confirmSolveBug()">✓ Mark Solved</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BUG GROUP POPUP ══ -->
+<div class="overlay" id="modal-bug-group" onclick="if(event.target===this)closeBugGroupModal()">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <h3 id="bgm-title" style="font-size:14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"></h3>
+      <button class="btn-close-modal" onclick="closeBugGroupModal()">✕</button>
+    </div>
+    <div id="bgm-body" style="padding:18px 22px;max-height:70vh;overflow-y:auto"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Supabase loading overlay -->
+<div id="sb-loading" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(255,247,237,0.92);align-items:center;justify-content:center;flex-direction:column;gap:12px">
+  <div style="width:40px;height:40px;border:4px solid #FED7AA;border-top-color:#EA580C;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <div style="font-size:14px;font-weight:600;color:#7C2D12">Loading your data…</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+// ── Supabase Config ──
+const SUPABASE_URL = 'https://rvdwjsiqtalgruqysdzl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable__XiARyXCBUli3SC27BjqUQ_jLlWiWrL';
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function sbSaveIssues(issuesArr) {
+  try {
+    // Delete all and reinsert (simplest sync strategy)
+    await _sb.from('tickets').delete().neq('oid', '__none__');
+    if (issuesArr.length) {
+      await _sb.from('tickets').insert(issuesArr.map(i => ({ oid: i.oid, data: i })));
+    }
+  } catch(e) { console.warn('Supabase ticket sync failed:', e); }
+}
+
+async function sbSaveAppData(key, value) {
+  try {
+    await _sb.from('app_data').upsert({ key, value }, { onConflict: 'key' });
+  } catch(e) { console.warn('Supabase app_data sync failed:', e); }
+}
+
+async function sbLoadAll() {
+  try {
+    const [ticketsRes, usersRes, companiesRes, errorsRes, oidRes] = await Promise.all([
+      _sb.from('tickets').select('data').order('created_at', { ascending: true }),
+      _sb.from('app_data').select('value').eq('key', 'tkt_users').maybeSingle(),
+      _sb.from('app_data').select('value').eq('key', 'tkt_companies').maybeSingle(),
+      _sb.from('app_data').select('value').eq('key', 'tkt_custom_errors').maybeSingle(),
+      _sb.from('app_data').select('value').eq('key', 'tkt_oid_counter').maybeSingle(),
+    ]);
+    if (ticketsRes.data && ticketsRes.data.length) {
+      issues = ticketsRes.data.map(r => r.data);
+      localStorage.setItem('tkt_issues', JSON.stringify(issues));
+    }
+    if (usersRes.data) localStorage.setItem('tkt_users', JSON.stringify(usersRes.data.value));
+    if (companiesRes.data) localStorage.setItem('tkt_companies', JSON.stringify(companiesRes.data.value));
+    if (errorsRes.data) localStorage.setItem('tkt_custom_errors', JSON.stringify(errorsRes.data.value));
+    if (oidRes.data) { oidCounter = oidRes.data.value; localStorage.setItem('tkt_oid_counter', String(oidCounter)); }
+  } catch(e) { console.warn('Supabase load failed, using local data:', e); }
+}
+
+// ── Auth & User Management ──
+const DEFAULT_USERS = [
+  { username:'admin', password:'admin123', name:'Super Admin', role:'superadmin', created:'2025-01-01' }
+];
+
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem('tkt_users') || 'null') || DEFAULT_USERS; }
+  catch(e) { return DEFAULT_USERS; }
+}
+function saveUsers(users) { localStorage.setItem('tkt_users', JSON.stringify(users)); sbSaveAppData('tkt_users', users); }
+
+let currentUser = null;
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const users = getUsers();
+  const match = users.find(x => x.username === u && x.password === p);
+  if (!match) {
+    const err = document.getElementById('login-error');
+    err.classList.add('show');
+    document.getElementById('login-pass').value = '';
+    setTimeout(() => err.classList.remove('show'), 3000);
+    return;
+  }
+  if (match.active === false) {
+    const err = document.getElementById('login-error');
+    err.textContent = 'This account has been deactivated.';
+    err.classList.add('show');
+    document.getElementById('login-pass').value = '';
+    setTimeout(() => { err.classList.remove('show'); err.textContent = 'Invalid username or password.'; }, 3500);
+    return;
+  }
+  currentUser = match;
+  localStorage.setItem('tkt_session', match.username);
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('footer-username').textContent = match.name;
+  if (match.role === 'superadmin') {
+    ['dashboard','history','bugs'].forEach(v => { const n=document.getElementById(`nav-${v}`); if(n) n.style.display='flex'; });
+    document.getElementById('nav-agents').style.display = 'flex';
+    document.getElementById('nav-companies').style.display = 'flex';
+    document.getElementById('nav-reports').style.display = 'flex';
+    updateAgentCount();
+    updateCompanyCount();
+    switchView('dashboard');
+  } else {
+    // Apply view permissions
+    const allowedViews = match.views && match.views.length ? match.views : ['dashboard','history','bugs'];
+    ['dashboard','history','bugs'].forEach(v => {
+      const n = document.getElementById(`nav-${v}`);
+      if (n) n.style.display = allowedViews.includes(v) ? 'flex' : 'none';
+    });
+    switchView(allowedViews[0]);
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  localStorage.removeItem('tkt_session');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-overlay').style.display = 'flex';
+  ['dashboard','history','bugs'].forEach(v => { const n=document.getElementById(`nav-${v}`); if(n) n.style.display='flex'; });
+  document.getElementById('nav-agents').style.display = 'none';
+  document.getElementById('nav-companies').style.display = 'none';
+  document.getElementById('nav-reports').style.display = 'none';
+  switchView('dashboard');
+}
+
+function updateAgentCount() { /* badge removed */ }
+
+function renderAgents() {
+  const users = getUsers();
+  const companies = getCompanies();
+  const tbody = document.getElementById('agents-tbody');
+  tbody.innerHTML = users.map((u, idx) => {
+    const isActive = u.active !== false;
+    const allowedViews = u.views && u.views.length ? u.views : ['dashboard','history','bugs'];
+    const cos = u.companies || [];
+    const viewTags = u.role !== 'superadmin'
+      ? allowedViews.map(v=>`<span class="perm-tag">${v.charAt(0).toUpperCase()+v.slice(1)}</span>`).join('')
+      : '<span style="font-size:11px;color:var(--gray-400)">—</span>';
+    const coTags = u.role !== 'superadmin'
+      ? (cos.length === 0
+          ? '<span class="perm-tag perm-all">All</span>'
+          : cos.map(mid=>{ const c=companies.find(x=>x.mid===mid); return `<span class="perm-tag">${c?c.name:mid}</span>`; }).join(''))
+      : '<span style="font-size:11px;color:var(--gray-400)">—</span>';
+    const statusCell = u.role !== 'superadmin'
+      ? `<span class="agent-status-pill ${isActive?'active':'inactive'}">${isActive?'Active':'Inactive'}</span>`
+      : '<span style="font-size:11px;color:var(--gray-400)">—</span>';
+    const actionCell = u.role !== 'superadmin'
+      ? `<div style="display:flex;gap:5px;flex-wrap:wrap">
+           <button class="btn-deact-agent${isActive?'':' reactivate'}" onclick="toggleAgentActive('${u.username}')">${isActive?'Deactivate':'Activate'}</button>
+           <button class="btn-del-agent" onclick="deleteAgent('${u.username}')">Remove</button>
+         </div>`
+      : '<span style="font-size:11px;color:var(--gray-400)">—</span>';
+    const rowClick = u.role !== 'superadmin' ? `onclick="openEditAgent('${u.username}')" style="cursor:pointer"` : '';
+    return `<tr ${rowClick}>
+      <td style="color:var(--gray-400);font-size:11px">${idx+1}</td>
+      <td><code style="background:var(--orange-50);padding:2px 7px;border-radius:4px;font-size:12px;color:var(--orange-700);border:1px solid var(--orange-200)">${u.username}</code></td>
+      <td><span class="agent-role-pill ${u.role}">${u.role==='superadmin'?'Super Admin':'Agent'}</span></td>
+      <td>${statusCell}</td>
+      <td>${viewTags}</td>
+      <td>${coTags}</td>
+      <td style="font-size:11px;color:var(--gray-500)">${u.created}</td>
+      <td onclick="event.stopPropagation()">${actionCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddAgent() {
+  ['a-uname','a-pass'].forEach(id => document.getElementById(id).value = '');
+  ['dashboard','history','bugs'].forEach(v => { document.getElementById(`a-view-${v}`).checked = true; });
+  const companies = getCompanies();
+  document.getElementById('a-companies-list').innerHTML = companies.map(c =>
+    `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:#334155">
+       <input type="checkbox" class="a-co-check" value="${c.mid}"> ${c.name} <span style="color:var(--gray-400)">(${c.mid})</span>
+     </label>`).join('');
+  document.getElementById('modal-agent').classList.add('open');
+}
+
+function confirmAddAgent() {
+  const uname = document.getElementById('a-uname').value.trim().toLowerCase();
+  const pass  = document.getElementById('a-pass').value;
+  if (!uname || !pass) { alert('Username and Password are required.'); return; }
+  const views = ['dashboard','history','bugs'].filter(v => document.getElementById(`a-view-${v}`).checked);
+  if (!views.length) { alert('Select at least one view permission.'); return; }
+  const companies = [...document.querySelectorAll('.a-co-check:checked')].map(el => el.value);
+  const users = getUsers();
+  if (users.find(u => u.username === uname)) { alert('Username already exists.'); return; }
+  users.push({ username: uname, password: pass, name: uname, role: 'agent', created: new Date().toISOString().slice(0,10), active: true, views, companies });
+  saveUsers(users);
+  closeModal('modal-agent');
+  renderAgents();
+  updateAgentCount();
+  showToast(`Agent "${uname}" created ✓`, true);
+}
+
+function deleteAgent(username) {
+  if (!confirm(`Remove agent "${username}"?`)) return;
+  const users = getUsers().filter(u => u.username !== username);
+  saveUsers(users);
+  renderAgents();
+  updateAgentCount();
+  showToast('Agent removed');
+}
+
+let editAgentTarget = null;
+
+function openEditAgent(username) {
+  const users = getUsers();
+  const u = users.find(x => x.username === username);
+  if (!u) return;
+  editAgentTarget = username;
+  document.getElementById('ea-title').textContent = username;
+  const isActive = u.active !== false;
+  document.getElementById('ea-active').checked = isActive;
+  syncEaToggle(isActive);
+  ['dashboard','history','bugs'].forEach(v => {
+    const views = u.views && u.views.length ? u.views : ['dashboard','history','bugs'];
+    document.getElementById(`ea-view-${v}`).checked = views.includes(v);
+  });
+  const companies = getCompanies();
+  const cos = u.companies || [];
+  document.getElementById('ea-companies-list').innerHTML = companies.map(c =>
+    `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:#334155">
+       <input type="checkbox" class="ea-co-check" value="${c.mid}"${cos.includes(c.mid)?' checked':''}> ${c.name} <span style="color:var(--gray-400)">(${c.mid})</span>
+     </label>`).join('');
+  document.getElementById('modal-edit-agent').classList.add('open');
+}
+
+function toggleEaStatus() {
+  const cb = document.getElementById('ea-active');
+  cb.checked = !cb.checked;
+  syncEaToggle(cb.checked);
+}
+
+function syncEaToggle(on) {
+  document.getElementById('ea-toggle-track').style.background = on ? 'var(--orange-500)' : '#ccc';
+  document.getElementById('ea-toggle-thumb').style.left = on ? '21px' : '3px';
+  document.getElementById('ea-status-label').textContent = on ? 'Active' : 'Inactive';
+  document.getElementById('ea-status-label').style.color = on ? '#166534' : '#991B1B';
+}
+
+function saveEditAgent() {
+  if (!editAgentTarget) return;
+  const views = ['dashboard','history','bugs'].filter(v => document.getElementById(`ea-view-${v}`).checked);
+  if (!views.length) { alert('Select at least one view permission.'); return; }
+  const companies = [...document.querySelectorAll('.ea-co-check:checked')].map(el => el.value);
+  const active = document.getElementById('ea-active').checked;
+  const users = getUsers();
+  const u = users.find(x => x.username === editAgentTarget);
+  if (!u) return;
+  u.views = views;
+  u.companies = companies;
+  u.active = active;
+  saveUsers(users);
+  closeModal('modal-edit-agent');
+  renderAgents();
+  showToast(`"${editAgentTarget}" updated ✓`, true);
+}
+
+function toggleAgentActive(username) {
+  const users = getUsers();
+  const u = users.find(x => x.username === username);
+  if (!u) return;
+  u.active = u.active === false;  // toggle: false→true, true/undefined→false
+  saveUsers(users);
+  renderAgents();
+  showToast(u.active ? `"${username}" reactivated ✓` : `"${username}" deactivated`, u.active);
+}
+
+// ── Company / Member ID Management ──
+const DEFAULT_COMPANIES = [
+  {mid:'151',name:'TX',   added:'2025-01-01'},
+  {mid:'159',name:'MB',   added:'2025-01-01'},
+  {mid:'160',name:'SK',   added:'2025-01-01'},
+  {mid:'161',name:'1T',   added:'2025-01-01'},
+  {mid:'162',name:'7sea', added:'2025-01-01'},
+  {mid:'163',name:'5T',   added:'2025-01-01'},
+  {mid:'164',name:'T246', added:'2025-01-01'},
+  {mid:'165',name:'T12',  added:'2025-01-01'},
+  {mid:'166',name:'forvo',added:'2025-01-01'},
+];
+// Seed defaults if localStorage is empty or still has old placeholder names
+(function seedCompanies(){
+  const stored = localStorage.getItem('tkt_companies');
+  if (!stored || stored.includes('Company 151')) {
+    localStorage.setItem('tkt_companies', JSON.stringify(DEFAULT_COMPANIES));
+  }
+})();
+
+function getCompanies() {
+  try { return JSON.parse(localStorage.getItem('tkt_companies') || 'null') || DEFAULT_COMPANIES; }
+  catch(e) { return DEFAULT_COMPANIES; }
+}
+function saveCompanies(list) { localStorage.setItem('tkt_companies', JSON.stringify(list)); sbSaveAppData('tkt_companies', list); }
+
+function rebuildMemberDropdowns() {
+  const companies = getCompanies();
+  const opts = companies.map(c => `<option value="${c.mid}">${c.mid} — ${c.name}</option>`).join('');
+  const filterOpts = `<option value="">Member ID</option>` + companies.map(c => `<option value="${c.mid}">${c.mid} — ${c.name}</option>`).join('');
+  // new ticket modal
+  const nm = document.getElementById('n-member');
+  if (nm) nm.innerHTML = `<option value="">— Select —</option>` + opts;
+  // filter bar
+  const fm = document.getElementById('f-member');
+  if (fm) fm.innerHTML = filterOpts;
+}
+
+function updateCompanyCount() { /* badge removed */ }
+
+function renderCompanies() {
+  const companies = getCompanies();
+  document.getElementById('companies-tbody').innerHTML = companies.map(c => `<tr>
+    <td><code style="background:var(--orange-50);padding:3px 10px;border-radius:6px;font-size:13px;font-weight:700;color:var(--orange-700);border:1px solid var(--orange-200)">${c.mid}</code></td>
+    <td style="font-size:13px;font-weight:600;color:var(--gray-800)">${c.name}</td>
+    <td><button class="btn-del-agent" onclick="deleteCompany('${c.mid}')">Remove</button></td>
+  </tr>`).join('') || `<tr><td colspan="3" style="text-align:center;padding:32px;color:var(--gray-400)">No companies yet</td></tr>`;
+}
+
+function openAddCompany() {
+  ['c-mid','c-name'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('modal-company').classList.add('open');
+}
+
+function confirmAddCompany() {
+  const mid  = document.getElementById('c-mid').value.trim();
+  const name = document.getElementById('c-name').value.trim();
+  if (!mid || !name) { alert('Both fields are required.'); return; }
+  const companies = getCompanies();
+  if (companies.find(c => c.mid === mid)) { alert('Member ID already exists.'); return; }
+  companies.push({ mid, name, added: new Date().toISOString().slice(0,10) });
+  saveCompanies(companies);
+  rebuildMemberDropdowns();
+  closeModal('modal-company');
+  renderCompanies();
+  updateCompanyCount();
+  showToast(`Company "${name}" added ✓`, true);
+}
+
+function deleteCompany(mid) {
+  if (!confirm(`Remove Member ID ${mid}?`)) return;
+  saveCompanies(getCompanies().filter(c => c.mid !== mid));
+  rebuildMemberDropdowns();
+  renderCompanies();
+  updateCompanyCount();
+  showToast('Company removed');
+}
+
+// ── Constants ──
+const DEFAULT_ERROR_TYPES = ['2FA','Chart','Close Position','Corporate Action','Deposit','Funds','Liquidation','Login Error','Margin (MTM)','Open Position','Option Chain','OTP','Order Execution','Reports','Wallet Not Found','Watchlist','Web Page','Withdraw','Wrong Price'];
+function getCustomErrorTypes() { try { return JSON.parse(localStorage.getItem('tkt_custom_errors')||'[]'); } catch(e) { return []; } }
+function saveCustomErrorTypes(list) { localStorage.setItem('tkt_custom_errors', JSON.stringify(list)); sbSaveAppData('tkt_custom_errors', list); }
+let ERROR_TYPES = [...new Set([...DEFAULT_ERROR_TYPES, ...getCustomErrorTypes()])].sort();
+const MEMBER_IDS  = ['151','159','160','161','162','163','164','165'];
+const SOL_TYPES   = ['Enhancement Required','Monitoring Required','Permanent Fix','Temporary Fix','Under Development'];
+const EXCHANGE    = ['Cash','Commodities','Crypto','Derivatives','Forex'];
+
+const ST_CLASS = { 'open':'b-open','in-progress':'b-inprog','closed':'b-closed','bug':'b-bug','new-bug':'b-bug','old-bug':'b-bug','bug-solved':'b-bug-solved','manually-cleared':'b-man-cleared' };
+const ST_LABEL = { 'open':'Open','in-progress':'In Process','closed':'Closed','bug':'Bug','new-bug':'Bug','old-bug':'Bug','bug-solved':'Bug Solved','manually-cleared':'Manually Cleared' };
+const SOL_CLASS = { 'Permanent Fix':'b-sol-perm','Temporary Fix':'b-sol-temp','Monitoring Required':'b-sol-mon','Enhancement Required':'b-sol-enh','Under Development':'b-sol-dev' };
+const AVATAR_COLORS = ['#C2410C','#0F766E','#7C3AED','#DB2777','#D97706','#059669','#0369A1','#9A3412'];
+
+// ── Build checkbox grid ──
+function buildChecks(preserveChecked) {
+  const prev = preserveChecked ? [...document.querySelectorAll('#n-error-checks input:checked')].map(c=>c.value) : [];
+  document.getElementById('n-error-checks').innerHTML = ERROR_TYPES.map(e =>
+    `<label class="check-item"><input type="checkbox" value="${e}"${prev.includes(e)?' checked':''}> ${e}</label>`
+  ).join('');
+}
+buildChecks();
+
+// ── Add custom error type ──
+function toggleAddErrorType() {
+  const wrap = document.getElementById('add-error-wrap');
+  const visible = wrap.style.display !== 'none';
+  wrap.style.display = visible ? 'none' : 'flex';
+  if (!visible) document.getElementById('new-error-input').focus();
+}
+
+function addErrorType() {
+  const input = document.getElementById('new-error-input');
+  const val = input.value.trim();
+  if (!val) return;
+  if (ERROR_TYPES.map(e=>e.toLowerCase()).includes(val.toLowerCase())) {
+    alert('This error type already exists.'); return;
+  }
+  ERROR_TYPES.push(val);
+  ERROR_TYPES.sort();
+  // Persist only the custom (non-default) types
+  saveCustomErrorTypes(ERROR_TYPES.filter(e => !DEFAULT_ERROR_TYPES.includes(e)));
+  buildChecks(true);
+  // auto-check the new type
+  document.querySelectorAll('#n-error-checks input').forEach(c => { if(c.value===val) c.checked=true; });
+  input.value = '';
+  document.getElementById('add-error-wrap').style.display = 'none';
+  showToast(`"${val}" added ✓`, true);
+}
+
+function loadIssues() {
+  try { const d = JSON.parse(localStorage.getItem('tkt_issues')); return Array.isArray(d) ? d : []; }
+  catch(e) { return []; }
+}
+function saveIssues() { localStorage.setItem('tkt_issues', JSON.stringify(issues)); sbSaveIssues(issues); }
+function loadOidCounter() {
+  const stored = parseInt(localStorage.getItem('tkt_oid_counter'));
+  if (!isNaN(stored)) return stored;
+  return Math.max(...issues.map(i => i.id), 6) + 1;
+}
+function saveOidCounter() { localStorage.setItem('tkt_oid_counter', String(oidCounter)); sbSaveAppData('tkt_oid_counter', oidCounter); }
+
+let issues = loadIssues();
+let oidCounter = loadOidCounter();
+let viewTarget = null, actionTarget = null, actionMode = null;
+let currentView = 'dashboard', statFilterValue = '', bugSubFilter = '';
+let bugGroups = [];
+let _pendingAttachments = []; // { file, url, name, previewSrc }
+
+function genOID() { const o = 'TKT-' + String(oidCounter++).padStart(5,'0'); saveOidCounter(); return o; }
+function nowStr()  { return new Date().toISOString().slice(0,16).replace('T',' '); }
+function agentCompanyFilter(arr) {
+  if (!currentUser || currentUser.role === 'superadmin') return arr;
+  const cos = currentUser.companies || [];
+  if (!cos.length) return arr;
+  return arr.filter(i => cos.includes(i.member));
+}
+function avatarColor(n) { let h=0; for(let c of n) h=(h*31+c.charCodeAt(0))%AVATAR_COLORS.length; return AVATAR_COLORS[Math.abs(h)]; }
+function initials(n) { return n.slice(0,2).toUpperCase(); }
+
+// ── Render table headers per view ──
+function renderHeaders() {
+  const th = document.getElementById('thead-row');
+  if (currentView === 'dashboard') {
+    th.innerHTML = `<tr>
+      <th style="width:9%">Date / Time</th>
+      <th style="width:8%">Client ID</th>
+      <th style="width:9%">Order ID</th>
+      <th style="width:7%">Member ID</th>
+      <th style="width:18%">Error Type</th>
+      <th style="width:18%">Description</th>
+      <th style="width:8%">Exchange</th>
+      <th style="width:8%">Status</th>
+      <th style="width:15%">Action</th>
+    </tr>`;
+  } else if (currentView === 'history') {
+    th.innerHTML = `<tr>
+      <th style="width:9%">Date / Time</th>
+      <th style="width:8%">Client ID</th>
+      <th style="width:9%">Order ID</th>
+      <th style="width:7%">Member ID</th>
+      <th style="width:15%">Error Type</th>
+      <th style="width:15%">Description</th>
+      <th style="width:7%">Exchange</th>
+      <th style="width:14%">Solution Type</th>
+      <th style="width:8%">Status</th>
+    </tr>`;
+  } else {
+    th.innerHTML = `<tr>
+      <th style="width:20%">Error Type</th>
+      <th style="width:7%">Clients</th>
+      <th style="width:7%">Exchange</th>
+      <th style="width:9%">Priority</th>
+      <th style="width:9%">Team</th>
+      <th style="width:14%">Status</th>
+      <th style="width:9%">First Reported</th>
+      <th style="width:9%">Last Updated</th>
+      <th style="width:16%">Action</th>
+    </tr>`;
+  }
+}
+
+// ── Main render ──
+function render() {
+  if (currentView === 'agents') return;
+  renderHeaders();
+  const q   = document.getElementById('search').value.toLowerCase();
+  const fs  = document.getElementById('f-status').value || statFilterValue;
+  const fe  = document.getElementById('f-error').value;
+  const fx  = document.getElementById('f-exchange').value;
+  const fm  = document.getElementById('f-member').value;
+  const fd1 = document.getElementById('f-date-from').value; // 'YYYY-MM-DD'
+  const fd2 = document.getElementById('f-date-to').value;
+
+  // ── Bugs view: grouped rendering ──
+  if (currentView === 'bugs') {
+    const showSolved = bugSubFilter === 'solved';
+    let groups = getBugGroups(showSolved);
+    const coFilter = currentUser && currentUser.role !== 'superadmin' && (currentUser.companies||[]).length > 0 ? currentUser.companies : null;
+    if (coFilter) groups = groups.filter(g => g.tickets.some(t => coFilter.includes(t.member)));
+    if (q || fe || fx || fm || fd1 || fd2) {
+      groups = groups.filter(g => {
+        if (q && !g.errors.some(e=>e.toLowerCase().includes(q)) &&
+            !g.tickets.some(t=>[...(t.cids||[t.cid]),t.oid,t.member,...t.errors].some(v=>v&&v.toLowerCase().includes(q)))) return false;
+        if (fe && !g.errors.includes(fe)) return false;
+        if (fx && !g.tickets.some(t=>t.exchange===fx)) return false;
+        if (fm && !g.tickets.some(t=>t.member===fm)) return false;
+        if (fd1 && g.date < fd1) return false;
+        if (fd2 && g.date > fd2) return false;
+        return true;
+      });
+    }
+    bugGroups = groups;
+    const tb2 = document.getElementById('tbody');
+    if (!groups.length) {
+      tb2.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <p>No ${showSolved?'solved':''} bugs found</p><small>Try a different filter</small></div></td></tr>`;
+    } else {
+      tb2.innerHTML = groups.map((g, idx) => {
+        const errHtml = g.errors.slice(0,2).map(e=>`<span class="badge b-err">${e}</span>`).join('') +
+          (g.errors.length>2 ? `<span style="font-size:10px;color:var(--gray-400)"> +${g.errors.length-2}</span>` : '');
+        const allCids = [...new Set(g.tickets.flatMap(t => t.cids || [t.cid]))];
+        const exchSample = g.tickets[0]?.exchange;
+        const exchHtml = exchSample ? `<span class="badge b-exch">${exchSample}</span>` : `<span style="color:var(--gray-400)">—</span>`;
+
+        const lastUpdated = g.tickets.reduce((latest, t) => t.date > latest ? t.date : latest, g.tickets[0]?.date || g.date);
+
+        if (showSolved) {
+          const res = g.tickets[0]?.bugResolution || {};
+          return `<tr class="is-bug" onclick="viewBugGroup(${idx})">
+            <td><div class="err-tags">${errHtml}</div></td>
+            <td><span style="display:inline-flex;align-items:center;gap:4px;background:var(--orange-100);color:var(--orange-700);font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;cursor:pointer">👥 ${allCids.length}</span></td>
+            <td>${exchHtml}</td>
+            <td colspan="3" style="font-size:12px;color:var(--gray-600)">${res.note?`<span style="color:var(--gray-400)">"${res.note.slice(0,50)}${res.note.length>50?'…':''}"</span>`:'—'}</td>
+            <td style="font-size:11px;color:var(--gray-500)">${g.date}</td>
+            <td style="font-size:11px;color:var(--gray-500)">${res.date||lastUpdated}</td>
+            <td><span class="badge b-closed" style="background:#D1FAE5;color:#065F46">✅ Solved</span></td>
+          </tr>`;
+        }
+
+        const priSelect = `<select class="pri-select" onclick="event.stopPropagation()" onchange="setBugGroupPriority(${idx},this.value)">
+          <option value="">— —</option>
+          <option value="High"${g.priority==='High'?' selected':''}>🔴 High</option>
+          <option value="Medium"${g.priority==='Medium'?' selected':''}>🟡 Medium</option>
+          <option value="Low"${g.priority==='Low'?' selected':''}>🟢 Low</option>
+        </select>`;
+        const teamSelect = `<select class="pri-select" onclick="event.stopPropagation()" onchange="setBugGroupTeam(${idx},this.value)">
+          <option value="">— —</option>
+          <option value="CRM"${g.team==='CRM'?' selected':''}>CRM</option>
+          <option value="Zynix"${g.team==='Zynix'?' selected':''}>Zynix</option>
+        </select>`;
+        const solSelect = `<select class="pri-select" onclick="event.stopPropagation()" onchange="setBugGroupSolution(${idx},this.value)" style="max-width:130px">
+          <option value="">— Select —</option>
+          ${SOL_TYPES.map(s=>`<option value="${s}"${g.solution===s?' selected':''}>${s}</option>`).join('')}
+        </select>`;
+        return `<tr class="is-bug" onclick="viewBugGroup(${idx})">
+          <td><div class="err-tags">${errHtml}</div></td>
+          <td><span style="display:inline-flex;align-items:center;gap:4px;background:var(--orange-100);color:var(--orange-700);font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;cursor:pointer">👥 ${allCids.length}</span></td>
+          <td>${exchHtml}</td>
+          <td onclick="event.stopPropagation()">${priSelect}</td>
+          <td onclick="event.stopPropagation()">${teamSelect}</td>
+          <td onclick="event.stopPropagation()">${solSelect}</td>
+          <td style="font-size:11px;color:var(--gray-500)">${g.date}</td>
+          <td style="font-size:11px;color:var(--orange-600);font-weight:500">${lastUpdated !== g.date ? lastUpdated : '—'}</td>
+          <td onclick="event.stopPropagation()"><button class="btn-action btn-solve" style="font-size:11px;padding:4px 10px" onclick="openSolveBug('group',${idx})">✓ Bug Resolved</button></td>
+        </tr>`;
+      }).join('');
+    }
+    renderStats();
+    return;
+  }
+
+  let pool;
+  if (currentView === 'dashboard') {
+    pool = agentCompanyFilter(issues.filter(i => i.status === 'open' || i.status === 'in-progress'));
+  } else {
+    pool = agentCompanyFilter(issues.filter(i => i.status === 'closed' || i.status === 'bug-solved' || i.status === 'manually-cleared'));
+  }
+
+  const filtered = pool.filter(i => {
+    const firstDesc = i.descs[0]?.text || '';
+    const dateStr = i.date.slice(0, 10);
+    return (!q  || [i.cid,i.oid,i.member,firstDesc,...i.errors].some(v=>v.toLowerCase().includes(q)))
+        && (!fs  || i.status === fs)
+        && (!fe  || i.errors.includes(fe))
+        && (!fx  || i.exchange === fx)
+        && (!fm  || i.member === fm)
+        && (!fd1 || dateStr >= fd1)
+        && (!fd2 || dateStr <= fd2);
+  });
+
+  const tb = document.getElementById('tbody');
+  const colspan = currentView === 'dashboard' ? 9 : 8;
+  if (!filtered.length) {
+    tb.innerHTML = `<tr><td colspan="${colspan}"><div class="empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <p>No tickets found</p><small>Try a different filter</small></div></td></tr>`;
+  } else {
+    tb.innerHTML = filtered.map(i => {
+      const errHtml = i.errors.slice(0,2).map(e=>`<span class="badge b-err">${e}</span>`).join('') +
+        (i.errors.length>2 ? `<span style="font-size:10px;color:var(--gray-400)"> +${i.errors.length-2}</span>` : '');
+      const exchHtml = i.exchange ? `<span class="badge b-exch">${i.exchange}</span>` : `<span style="color:var(--gray-400)">—</span>`;
+      const firstDesc = i.descs[0]?.text || '—';
+      // Multi-CID display: show first + badge for extras
+      const cidArr = i.cids || [i.cid];
+      const cidHtml = `<span class="client-id">${cidArr[0]}</span>${cidArr.length>1?` <span style="font-size:10px;font-weight:700;background:var(--orange-100);color:var(--orange-700);padding:1px 5px;border-radius:10px">+${cidArr.length-1}</span>`:''}`;
+
+      if (currentView === 'dashboard') {
+        return `<tr onclick="viewTicket(${i.id})">
+          <td style="font-size:11px;color:var(--gray-500);white-space:nowrap">${i.date}</td>
+          <td>${cidHtml}</td>
+          <td><span class="order-id">${i.oid}</span></td>
+          <td><span class="member-pill">${i.member}</span></td>
+          <td><div class="err-tags">${errHtml}</div></td>
+          <td class="td-desc" title="${firstDesc}">${firstDesc}</td>
+          <td>${exchHtml}</td>
+          <td><span class="badge ${ST_CLASS[i.status]}">${ST_LABEL[i.status]}</span></td>
+          <td onclick="event.stopPropagation()">
+            <div class="action-group">
+              <button class="btn-action btn-solve"  onclick="openAction(${i.id},'solve')">✓ Solved</button>
+              <button class="btn-action btn-bug" onclick="openAction(${i.id},'bug')">🐛 Bug</button>
+              ${i.status==='open' ? `<button class="btn-action btn-start" onclick="setStatus(${i.id},'in-progress');event.stopPropagation()">Start</button>` : ''}
+            </div>
+          </td>
+        </tr>`;
+      } else {
+        const solSelect = `<select class="pri-select" onclick="event.stopPropagation()" onchange="setBugSolution(${i.id},this.value)" style="max-width:130px">
+          <option value="">— Select —</option>
+          ${SOL_TYPES.map(s=>`<option value="${s}"${i.solution===s?' selected':''}>${s}</option>`).join('')}
+        </select>`;
+        return `<tr onclick="viewTicket(${i.id})">
+          <td style="font-size:11px;color:var(--gray-500);white-space:nowrap">${i.date}</td>
+          <td>${cidHtml}</td>
+          <td><span class="order-id">${i.oid}</span></td>
+          <td><span class="member-pill">${i.member}</span></td>
+          <td><div class="err-tags">${errHtml}</div></td>
+          <td class="td-desc" title="${firstDesc}">${firstDesc}</td>
+          <td>${exchHtml}</td>
+          <td onclick="event.stopPropagation()">${solSelect}</td>
+          <td><span class="badge ${ST_CLASS[i.status]}">${ST_LABEL[i.status]}</span></td>
+        </tr>`;
+      }
+    }).join('');
+  }
+
+  const cntBug = issues.filter(i=>(i.status==='bug'||i.status==='new-bug'||i.status==='old-bug'||i.status==='manually-cleared')&&!i.bugResolved).length;
+  const cntBugSolved = issues.filter(i=>i.status==='bug-solved').length;
+  document.getElementById('btab-cnt-all').textContent = cntBug;
+  const solvedEl = document.getElementById('btab-cnt-solved');
+  if (solvedEl) solvedEl.textContent = cntBugSolved;
+  // show/hide sub-tabs
+  document.getElementById('bug-tabs').classList.toggle('visible', currentView === 'bugs');
+  renderStats();
+}
+
+function renderStats() {
+  const grid = document.getElementById('stats-grid');
+  if (!grid) return;
+  const nOpen      = issues.filter(i=>i.status==='open').length;
+  const nProg      = issues.filter(i=>i.status==='in-progress').length;
+  const nClosed      = issues.filter(i=>i.status==='closed').length;
+  const nBugSolved   = issues.filter(i=>i.status==='bug-solved').length;
+  const nManCleared  = issues.filter(i=>i.status==='manually-cleared').length;
+  const nSolved      = nClosed + nBugSolved + nManCleared;
+  const nHistTotal   = nSolved;
+  const nBug       = issues.filter(i=>(i.status==='bug'||i.status==='new-bug'||i.status==='old-bug'||i.status==='manually-cleared')&&!i.bugResolved).length;
+
+  const card = (cls, label, val, onclick) =>
+    `<button class="stat-btn ${cls}${onclick?'':' plain'}" ${onclick?`onclick="${onclick}"`:''}><span class="stat-label">${label}</span><span class="stat-value">${val}</span></button>`;
+
+  if (currentView === 'dashboard') {
+    grid.innerHTML =
+      card('red',   'Open',        nOpen,  "statFilter('open')")  +
+      card('amber', 'In Progress', nProg,  "statFilter('in-progress')");
+  } else if (currentView === 'history') {
+    grid.innerHTML =
+      card('green', 'Solved',           nClosed,     "statFilter('closed')")  +
+      card('blue',  'Bug Resolved',     nBugSolved,  "statFilter('bug-solved')")  +
+      card('amber', 'Manually Cleared', nManCleared, "statFilter('manually-cleared')")  +
+      card('gray',  'Total',            nHistTotal,  "statFilter('')");
+  } else if (currentView === 'bugs') {
+    grid.innerHTML =
+      card('red',   'Active Bugs', nBug,       "setBugTab('active')") +
+      card('green', 'Bugs Solved', nBugSolved, "setBugTab('solved')");
+  } else {
+    grid.innerHTML = '';
+  }
+
+  // restore active state on filter buttons
+  if (currentView !== 'bugs') {
+    document.querySelectorAll('.stat-btn').forEach(b => b.classList.remove('active'));
+    const map = { 'open':'', 'in-progress':'', 'closed':'', '':'' };
+    if (statFilterValue === 'open')        document.querySelector('.stat-btn.red')?.classList.add('active');
+    else if (statFilterValue==='in-progress') document.querySelector('.stat-btn.amber')?.classList.add('active');
+    else if (statFilterValue==='closed')   document.querySelector('.stat-btn.green')?.classList.add('active');
+    else                                   document.querySelector('.stat-btn.blue')?.classList.add('active');
+  }
+}
+
+// ── View ticket popup ──
+function viewTicket(id) {
+  viewTarget = id;
+  const i = issues.find(x=>x.id===id);
+  document.getElementById('view-oid').textContent = i.oid;
+  document.getElementById('view-sub').textContent = i.date + ' · ' + ST_LABEL[i.status];
+
+  const cidArr = i.cids || [i.cid];
+  document.getElementById('view-meta').innerHTML = `
+    <div class="info-item ${cidArr.length>1?'full':''}"><label>Client ID${cidArr.length>1?'s':''}</label><p style="display:flex;flex-wrap:wrap;gap:4px">${cidArr.map(c=>`<span class="client-id">${c}</span>`).join('')}</p></div>
+    <div class="info-item"><label>Member ID</label><p><span class="member-pill">${i.member}</span></p></div>
+    <div class="info-item"><label>Status</label><p><span class="badge ${ST_CLASS[i.status]}">${ST_LABEL[i.status]}</span></p></div>
+    <div class="info-item"><label>Exchange</label><p>${i.exchange||'—'}</p></div>
+    ${i.solution ? `<div class="info-item"><label>Solution Type</label><p><span class="badge ${SOL_CLASS[i.solution]||''}">${i.solution}</span></p></div>` : ''}`;
+
+  document.getElementById('view-errtags').innerHTML = i.errors.map(e=>`<span class="badge b-err">${e}</span>`).join('');
+
+  // Description thread
+  const thread = document.getElementById('view-desc-thread');
+  thread.innerHTML = i.descs.map((d,idx) => `
+    <div class="desc-entry">
+      <div class="de-meta"><span>#${idx+1}</span> ${d.date}</div>
+      <div class="de-text">${d.text}</div>
+    </div>`).join('');
+
+  document.getElementById('new-desc-input').value = '';
+
+  // Attachments grid
+  const attDiv = document.getElementById('view-attachment');
+  const attList = i.attachments && i.attachments.length ? i.attachments
+                : i.attachment ? [i.attachment] : [];  // legacy compat
+  if (attList.length) {
+    attDiv.style.display = 'block';
+    attDiv.innerHTML = `<div class="form-label" style="margin-bottom:8px">Attachments (${attList.length})</div>
+      <div class="att-grid" id="att-grid-inner"><span style="font-size:12px;color:var(--gray-400)">Loading…</span></div>`;
+
+    async function resolveUrl(att) {
+      if (att.dataUrl) return att.dataUrl;
+      if (att.url)     return att.url;
+      if (!att.storageKey) return null;
+      const blob = await loadAttachment(att.storageKey);
+      if (!blob) return null;
+      return new Promise((res, rej) => {
+        const fr = new FileReader(); fr.onload = e => res(e.target.result); fr.onerror = rej; fr.readAsDataURL(blob);
+      });
+    }
+
+    Promise.all(attList.map(resolveUrl)).then(urls => {
+      const grid = document.getElementById('att-grid-inner');
+      if (!grid) return;
+      grid.innerHTML = attList.map((att, idx) => {
+        const url = urls[idx];
+        const isVideo = att.type && att.type.startsWith('video/');
+        if (!url) return `<div style="font-size:11px;color:var(--gray-400);background:var(--orange-50);border:1px solid var(--orange-100);border-radius:6px;padding:6px 10px;align-self:center">📎 ${att.name}<br><span style="color:var(--gray-400)">(unavailable)</span></div>`;
+        return isVideo
+          ? `<div class="att-thumb-wrap" onclick="openAttLightbox(${idx})"><video src="${url}" style="width:110px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--orange-200);display:block"></video><div style="font-size:10px;color:var(--gray-500);margin-top:3px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${att.name}</div></div>`
+          : `<div class="att-thumb-wrap" onclick="openAttLightbox(${idx})"><img src="${url}" alt="${att.name}" style="width:110px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--orange-200);display:block"><div style="font-size:10px;color:var(--gray-500);margin-top:3px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${att.name}</div></div>`;
+      }).join('');
+      // Store resolved urls for lightbox
+      attDiv._resolvedUrls = urls;
+      attDiv._attList = attList;
+    }).catch(() => { attDiv.style.display = 'none'; });
+  } else {
+    attDiv.style.display = 'none';
+  }
+
+  // Action bar — only show in dashboard
+  const bar = document.getElementById('view-action-bar');
+  if (currentView === 'dashboard' && (i.status==='open'||i.status==='in-progress')) {
+    bar.style.display = 'flex';
+    bar.innerHTML = `<span class="view-actions-label">Actions:</span>
+      <button class="btn-action btn-solve"  onclick="openAction(${i.id},'solve')">✓ Solved</button>
+      <button class="btn-action btn-bug" onclick="openAction(${i.id},'bug')">🐛 Bug</button>
+      ${i.status==='open'?`<button class="btn-action btn-start" onclick="setStatus(${i.id},'in-progress');closeModal('modal-view');render()">Start</button>`:''}`;
+  } else {
+    bar.style.display = 'none';
+  }
+
+  // Footer: Submit only for dashboard open tickets, Close otherwise
+  const submitBtn = document.getElementById('btn-view-submit');
+  if (currentView === 'dashboard' && (i.status==='open'||i.status==='in-progress')) {
+    submitBtn.textContent = 'Submit';
+    submitBtn.onclick = handleViewSubmit;
+  } else {
+    submitBtn.textContent = 'Close';
+    submitBtn.onclick = () => closeModal('modal-view');
+  }
+
+  document.getElementById('modal-view').classList.add('open');
+}
+
+// ── Add description note ──
+function addDescNote() {
+  if (!viewTarget) return;
+  const val = document.getElementById('new-desc-input').value.trim();
+  if (!val) return;
+  const i = issues.find(x=>x.id===viewTarget);
+  i.descs.push({ text:val, date:nowStr() });
+  saveIssues();
+  document.getElementById('new-desc-input').value = '';
+  // refresh thread
+  const thread = document.getElementById('view-desc-thread');
+  thread.innerHTML = i.descs.map((d,idx) => `
+    <div class="desc-entry">
+      <div class="de-meta"><span>#${idx+1}</span> ${d.date}</div>
+      <div class="de-text">${d.text}</div>
+    </div>`).join('');
+  thread.lastElementChild.scrollIntoView({behavior:'smooth'});
+  render();
+}
+
+// ── Open action confirm modal ──
+function openAction(id, mode) {
+  actionTarget = id; actionMode = mode;
+  const i = issues.find(x=>x.id===id);
+
+  document.getElementById('action-title').textContent =
+    mode==='solve' ? 'Resolve Ticket' : 'Report as Bug';
+
+  document.getElementById('action-details').innerHTML = `
+    <div class="info-item"><label>Order ID</label><p class="order-id">${i.oid}</p></div>
+    <div class="info-item"><label>Client ID</label><p><span class="client-id">${i.cid}</span></p></div>
+    <div class="info-item full"><label>Error Types</label><p>${i.errors.map(e=>`<span class="badge b-err">${e}</span>`).join(' ')}</p></div>`;
+
+  document.getElementById('sec-solve').style.display  = mode==='solve' ? 'block' : 'none';
+  document.getElementById('sec-newbug').style.display = mode==='bug'   ? 'block' : 'none';
+
+  if (mode==='solve') { document.getElementById('a-resolve-note').value=''; document.getElementById('a-solution').value=''; }
+  if (mode==='bug') {
+    document.getElementById('a-bug-note').value='';
+    const notice = document.getElementById('bug-match-notice');
+    // Check for previously SOLVED bugs with same error types
+    const solvedMatches = issues.filter(x => x.status==='bug-solved' && x.errors.some(e=>i.errors.includes(e)) && x.bugResolution);
+    if (solvedMatches.length) {
+      const res = solvedMatches[0].bugResolution;
+      const sharedErrs = solvedMatches[0].errors.filter(e=>i.errors.includes(e)).join(', ');
+      notice.innerHTML = `✅ <strong>Previously solved bug detected</strong> — Error: <em>${sharedErrs}</em><br>Solution: <strong>${res.solution||'—'}</strong>${res.note ? ` · "${res.note}"` : ''}<br><small style="color:var(--gray-400)">Solved on ${res.date}</small>`;
+      notice.classList.add('show');
+    } else {
+      const activeMatches = issues.filter(x=>(x.status==='bug'||x.status==='new-bug'||x.status==='old-bug') && x.errors.some(e=>i.errors.includes(e)) && x.id!==id);
+      if(activeMatches.length){ notice.textContent=`⚠ Similar active bug(s): ${activeMatches.map(m=>m.oid).join(', ')}`; notice.classList.add('show'); }
+      else notice.classList.remove('show');
+    }
+  }
+  const btn = document.getElementById('action-confirm-btn');
+  const btnMap = { 'solve':'green','bug':'red' };
+  const lblMap = { 'solve':'Mark Resolved','bug':'Report Bug' };
+  btn.className = 'btn-confirm ' + btnMap[mode];
+  btn.textContent = lblMap[mode];
+
+  document.getElementById('modal-action').classList.add('open');
+}
+
+function confirmAction() {
+  if (!actionTarget) return;
+  const i = issues.find(x=>x.id===actionTarget);
+  if (actionMode === 'solve') {
+    const sol = document.getElementById('a-solution').value;
+    if (!sol) { alert('Please select a Solution Type.'); return; }
+    i.status = 'closed'; i.solution = sol;
+    showToast('Ticket resolved ✓', true);
+  } else if (actionMode === 'bug') {
+    i.status = 'bug';
+    showToast('Reported as Bug 🐛');
+  }
+  saveIssues();
+  closeModal('modal-action');
+  closeModal('modal-view');
+  render();
+}
+
+function setStatus(id, s) { const i=issues.find(x=>x.id===id); if(i){i.status=s; saveIssues(); render();} }
+
+function setBugSolution(id, sol) {
+  const i = issues.find(x=>x.id===id);
+  if (i) { i.solution = sol; saveIssues(); showToast(sol ? `Solution set: ${sol}` : 'Solution cleared', !!sol); }
+}
+
+function setBugPriority(id, pri) {
+  const i = issues.find(x=>x.id===id);
+  if (i) { i.priority = pri; saveIssues(); showToast(pri ? `Priority: ${pri}` : 'Priority cleared', !!pri); }
+}
+
+// ── Bug Grouping ──
+function getBugGroups(solved = false) {
+  const pool = solved
+    ? issues.filter(i => i.status === 'bug-solved' || (i.status === 'manually-cleared' && i.bugResolved))
+    : issues.filter(i => (i.status === 'bug' || i.status === 'new-bug' || i.status === 'old-bug' || i.status === 'manually-cleared') && !i.bugResolved);
+  const map = {};
+  pool.forEach(i => {
+    const day = i.date.slice(0, 10);
+    const key = [...i.errors].sort().join('|||') + '::' + day;
+    if (!map[key]) {
+      map[key] = { key, errors: i.errors, date: day, status: i.status, priority: i.priority || '', solution: i.solution || '', team: i.bugTeam || '', tickets: [] };
+    }
+    map[key].tickets.push(i);
+    if (!map[key].priority && i.priority) map[key].priority = i.priority;
+    if (!map[key].solution && i.solution) map[key].solution = i.solution;
+    if (!map[key].team && i.bugTeam)      map[key].team = i.bugTeam;
+  });
+  return Object.values(map);
+}
+
+function setBugGroupPriority(idx, pri) {
+  const g = bugGroups[idx];
+  if (!g) return;
+  g.tickets.forEach(t => { const issue = issues.find(x=>x.id===t.id); if(issue) issue.priority = pri; });
+  g.priority = pri;
+  saveIssues();
+  showToast(pri ? `Priority: ${pri}` : 'Priority cleared', !!pri);
+}
+
+function setBugGroupSolution(idx, sol) {
+  const g = bugGroups[idx];
+  if (!g) return;
+  g.tickets.forEach(t => { const issue = issues.find(x=>x.id===t.id); if(issue) issue.solution = sol; });
+  g.solution = sol;
+  saveIssues();
+  showToast(sol ? `Solution set: ${sol}` : 'Solution cleared', !!sol);
+}
+
+function viewBugGroup(idx) {
+  const g = bugGroups[idx];
+  if (!g) return;
+  const PRI_CLASS = { 'High':'b-pri-high','Medium':'b-pri-med','Low':'b-pri-low' };
+  const errLabels = g.errors.map(e=>`<span class="badge b-err">${e}</span>`).join(' ');
+  const isSolved = bugSubFilter === 'solved';
+  document.getElementById('bgm-title').innerHTML = errLabels +
+    `&nbsp;<small style="color:var(--gray-400);font-size:11px;font-weight:400">${g.date}</small>`;
+  document.getElementById('bgm-body').innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <span class="badge ${ST_CLASS[g.status]}">${ST_LABEL[g.status]}</span>
+      ${g.priority ? `<span class="badge ${PRI_CLASS[g.priority]||''}" style="font-size:11px">${g.priority} Priority</span>` : ''}
+      ${g.team ? `<span style="font-size:11px;background:#EDE9FE;color:#5B21B6;padding:2px 8px;border-radius:10px;font-weight:600">${g.team}</span>` : ''}
+      ${g.solution ? `<span class="badge b-sol-perm" style="font-size:11px">${g.solution}</span>` : ''}
+      <span style="font-size:11px;color:var(--gray-500);margin-left:auto">${g.tickets.length} ticket(s) affected</span>
+    </div>
+    ${isSolved && g.tickets[0]?.bugResolution ? `
+      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#065F46">
+        ✅ <strong>Resolution:</strong> "${g.tickets[0].bugResolution.note}" <span style="color:var(--gray-400);font-size:11px">· ${g.tickets[0].bugResolution.date}</span>
+      </div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${g.tickets.map(t => {
+        const cids = (t.cids||[t.cid]).map(c=>`<span class="client-id">${c}</span>`).join(' ');
+        const isBugSolved = t.status === 'bug-solved';
+        const isManCleared = t.status === 'manually-cleared';
+        const isDone = isBugSolved || isManCleared;
+        const borderColor = isBugSolved ? '#BBF7D0' : isManCleared ? '#FDE68A' : 'var(--orange-200)';
+        return `
+        <div style="background:var(--orange-50);border:1px solid ${borderColor};border-radius:8px;padding:10px 14px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            ${cids}
+            <span class="order-id">${t.oid}</span>
+            <span class="member-pill">${t.member}</span>
+            <span style="font-size:10px;color:var(--gray-400)">${t.date}</span>
+            ${isBugSolved
+              ? `<span style="margin-left:auto;font-size:11px;color:#065F46;font-weight:600">✅ Bug Resolved</span>`
+              : isManCleared
+              ? `<span style="margin-left:auto;font-size:11px;color:#92400E;font-weight:600">🔧 Manually Cleared</span>`
+              : `<button class="btn-action btn-solve" style="margin-left:auto;font-size:11px;padding:3px 10px;background:#FEF9C3;color:#854D0E;border-color:#FDE68A" onclick="event.stopPropagation();openSolveBug('ticket',${t.id})">✓ Manually Cleared</button>`}
+          </div>
+          ${t.descs[0]?.text ? `<div style="font-size:11px;color:var(--gray-500);margin-top:5px">${t.descs[0].text}</div>` : ''}
+          ${isDone && t.bugResolution ? `<div style="font-size:11px;color:var(--gray-500);margin-top:4px;font-style:italic">"${t.bugResolution.note}"</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  document.getElementById('modal-bug-group').classList.add('open');
+}
+
+function closeBugGroupModal() {
+  document.getElementById('modal-bug-group').classList.remove('open');
+}
+
+// _solveBugTarget: { mode:'group', idx } or { mode:'ticket', ticketId }
+let _solveBugTarget = null;
+
+function openSolveBug(mode, idOrIdx) {
+  _solveBugTarget = { mode, idOrIdx };
+  closeBugGroupModal();
+  let errHtml = '', subtitle = '';
+  if (mode === 'group') {
+    const g = bugGroups[idOrIdx];
+    if (!g) return;
+    errHtml = g.errors.map(e=>`<span class="badge b-err">${e}</span>`).join(' ');
+    subtitle = `<div style="font-size:11px;color:var(--gray-400);margin-top:6px">${g.tickets.length} ticket(s) — bug will be marked as resolved</div>`;
+  } else {
+    const t = issues.find(x => x.id === idOrIdx);
+    if (!t) return;
+    errHtml = t.errors.map(e=>`<span class="badge b-err">${e}</span>`).join(' ');
+    subtitle = `<div style="font-size:11px;color:var(--gray-400);margin-top:6px">${t.oid} · ${(t.cids||[t.cid]).join(', ')} — client case manually cleared</div>`;
+  }
+  const isGroup = mode === 'group';
+  document.getElementById('solve-bug-title').textContent = isGroup ? 'Bug Resolved' : 'Manually Cleared';
+  document.getElementById('solve-bug-note-label').textContent = isGroup ? 'How was the bug fixed? *' : 'How was the client case handled? *';
+  document.getElementById('solve-bug-note').placeholder = isGroup
+    ? 'Describe what caused the bug and how it was resolved…'
+    : 'Describe how the client case was handled manually…';
+  document.getElementById('solve-bug-confirm-btn').textContent = isGroup ? '✓ Confirm Bug Resolved' : '✓ Confirm Manually Cleared';
+  document.getElementById('solve-bug-errors').innerHTML =
+    `<div style="font-size:12px;color:var(--gray-600);margin-bottom:4px">Bug errors:</div>${errHtml}${subtitle}`;
+  document.getElementById('solve-bug-note').value = '';
+  document.getElementById('modal-solve-bug').classList.add('open');
+}
+
+function confirmSolveBug() {
+  const note = document.getElementById('solve-bug-note').value.trim();
+  if (!note) { alert('Please add a note before confirming.'); return; }
+  const resolution = { note, date: nowStr() };
+  const { mode, idOrIdx } = _solveBugTarget;
+  if (mode === 'group') {
+    const g = bugGroups[idOrIdx];
+    if (!g) return;
+    g.tickets.forEach(t => {
+      const issue = issues.find(x => x.id === t.id);
+      if (issue) {
+        issue.bugResolved = true;
+        issue.bugResolution = resolution;
+        if (issue.status !== 'manually-cleared') { issue.status = 'bug-solved'; }
+      }
+    });
+    showToast('Bug marked as resolved ✅', true);
+  } else {
+    const issue = issues.find(x => x.id === idOrIdx);
+    if (!issue) return;
+    issue.status = 'manually-cleared';
+    issue.bugResolution = resolution;
+    showToast('Client case manually cleared 🔧', true);
+  }
+  saveIssues();
+  closeModal('modal-solve-bug');
+  render();
+}
+
+function setBugGroupTeam(idx, val) {
+  const g = bugGroups[idx];
+  if (!g) return;
+  g.tickets.forEach(t => { const issue = issues.find(x=>x.id===t.id); if(issue) issue.bugTeam = val; });
+  g.team = val;
+  saveIssues();
+  showToast(val ? `Team set: ${val}` : 'Team cleared', !!val);
+}
+
+// ── IndexedDB for attachments ──
+const _fdb = { name:'tkt_attach_db', ver:1, store:'files' };
+function _openFDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(_fdb.name, _fdb.ver);
+    r.onupgradeneeded = e => e.target.result.createObjectStore(_fdb.store);
+    r.onsuccess = e => res(e.target.result);
+    r.onerror = e => rej(e.target.error);
+  });
+}
+async function saveAttachment(key, blob) {
+  const db = await _openFDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(_fdb.store, 'readwrite');
+    tx.objectStore(_fdb.store).put(blob, key);
+    tx.oncomplete = res;
+    tx.onerror = e => rej(e.target.error);
+  });
+}
+async function loadAttachment(key) {
+  const db = await _openFDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(_fdb.store, 'readonly');
+    const r = tx.objectStore(_fdb.store).get(key);
+    r.onsuccess = () => res(r.result || null);
+    r.onerror = e => rej(e.target.error);
+  });
+}
+
+// ── File upload (multi-attachment) ──
+function _renderPendingFiles() {
+  const container = document.getElementById('pending-files');
+  if (!container) return;
+  container.innerHTML = _pendingAttachments.map((a, idx) => `
+    <div class="pf-card">
+      ${a.previewSrc
+        ? `<img class="pf-thumb" src="${a.previewSrc}" alt="${a.name}">`
+        : `<div class="pf-thumb-video">▶</div>`}
+      <div class="pf-name">${a.name}</div>
+      <button class="pf-remove" onclick="removePendingFile(${idx})" title="Remove">×</button>
+    </div>`).join('');
+}
+
+function removePendingFile(idx) {
+  _pendingAttachments.splice(idx, 1);
+  _renderPendingFiles();
+}
+
+function _addPendingFile(file) {
+  const isVideo = file.type.startsWith('video/');
+  const maxMB = isVideo ? 100 : 20;
+  if (file.size > maxMB * 1024 * 1024) {
+    alert(`"${file.name}" is too large. Max ${maxMB} MB for ${isVideo ? 'videos' : 'images'}.`); return;
+  }
+  const entry = { file, url: null, name: file.name, previewSrc: null };
+  _pendingAttachments.push(entry);
+  const insertIdx = _pendingAttachments.length - 1;
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = e => { _pendingAttachments[insertIdx].previewSrc = e.target.result; _renderPendingFiles(); };
+    reader.readAsDataURL(file);
+  } else {
+    _renderPendingFiles();
+  }
+}
+
+function _extractDroppedUrl(event) {
+  let url = event.dataTransfer.getData('text/uri-list');
+  if (url) url = url.split('\n').find(l => l.trim() && !l.startsWith('#'));
+  if (!url) {
+    const html = event.dataTransfer.getData('text/html');
+    if (html) { const m = html.match(/src=["']([^"']+)["']/i); if (m) url = m[1]; }
+  }
+  if (!url) {
+    const txt = event.dataTransfer.getData('text/plain');
+    if (txt && /^https?:\/\//i.test(txt.trim())) url = txt.trim();
+  }
+  return url ? url.trim() : null;
+}
+
+function handleDrop(event) {
+  // Collect all file items from the drop
+  const files = [];
+  if (event.dataTransfer.items) {
+    for (let i = 0; i < event.dataTransfer.items.length; i++) {
+      if (event.dataTransfer.items[i].kind === 'file') {
+        const f = event.dataTransfer.items[i].getAsFile();
+        if (f) files.push(f);
+      }
+    }
+  }
+  if (!files.length && event.dataTransfer.files) {
+    for (let i = 0; i < event.dataTransfer.files.length; i++) files.push(event.dataTransfer.files[i]);
+  }
+
+  if (files.length) {
+    files.forEach(f => {
+      if (!f.type.startsWith('image/') && !f.type.startsWith('video/')) return;
+      _addPendingFile(f);
+    });
+    return;
+  }
+
+  // URL drag fallback (e.g. web image)
+  const url = _extractDroppedUrl(event);
+  if (!url || url.startsWith('blob:')) {
+    alert('Could not attach this image — try Copy Image then Ctrl+V to paste it.');
+    return;
+  }
+  const name = url.split('/').pop().split('?')[0] || 'image';
+  _pendingAttachments.push({ file: null, url, name, previewSrc: url });
+  _renderPendingFiles();
+}
+
+function handleFileSelect(input) {
+  for (let i = 0; i < input.files.length; i++) {
+    const file = input.files[i];
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) continue;
+    _addPendingFile(file);
+  }
+  input.value = '';
+}
+
+function clearFile() {
+  _pendingAttachments = [];
+  document.getElementById('n-file').value = '';
+  _renderPendingFiles();
+}
+
+function clearDateFilter() {
+  document.getElementById('f-date-from').value = '';
+  document.getElementById('f-date-to').value = '';
+  render();
+}
+
+function statFilter(val) {
+  if (currentView === 'agents') return;
+  statFilterValue = val;
+  document.getElementById('f-status').value = val;
+  render();
+}
+
+function setBugTab(val) {
+  bugSubFilter = val;
+  document.querySelectorAll('.bug-tab').forEach(t=>t.classList.remove('active'));
+  const map = {'':'btab-all','active':'btab-all','solved':'btab-solved','bug':'btab-all','new-bug':'btab-all','old-bug':'btab-all'};
+  document.getElementById(map[val]||'btab-all').classList.add('active');
+  render();
+}
+
+const STATUS_OPTIONS = {
+  dashboard: [['','Status'],['open','Open'],['in-progress','In Process']],
+  history:   [['','Status'],['closed','Closed'],['bug-solved','Bug Resolved'],['manually-cleared','Manually Cleared']],
+  bugs:      [['','Status'],['bug','Bug']]
+};
+
+function updateStatusFilter(view) {
+  if (view === 'agents') return;
+  const sel = document.getElementById('f-status');
+  const opts = STATUS_OPTIONS[view] || STATUS_OPTIONS['dashboard'];
+  sel.innerHTML = opts.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+}
+
+function switchView(view) {
+  currentView = view; statFilterValue = ''; bugSubFilter = '';
+  if (view !== 'agents' && view !== 'companies' && view !== 'reports') updateStatusFilter(view);
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-'+view).classList.add('active');
+  const titles = {
+    dashboard: 'Dashboard <span>· Open Tickets</span>',
+    history:   'History <span>· Resolved Tickets</span>',
+    bugs:      'Bugs <span>· Bug Tickets</span>',
+    agents:    'Agents <span>· Manage</span>',
+    companies: 'Companies <span>· Member IDs</span>',
+    reports:   'Reports <span>· Analytics</span>'
+  };
+  document.getElementById('view-title').innerHTML = titles[view];
+  document.getElementById('btn-create-ticket').style.display = view === 'dashboard' ? 'flex' : 'none';
+  if (view === 'bugs') {
+    bugSubFilter = 'active';
+    document.querySelectorAll('.bug-tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('btab-all').classList.add('active');
+  }
+  // show/hide panels vs normal content
+  const agentsPanel   = document.getElementById('agents-panel');
+  const companiesPanel = document.getElementById('companies-panel');
+  const reportsPanel  = document.getElementById('reports-panel');
+  // Only target the main ticket table-card, not the ones inside panels
+  const ticketTableCard = document.querySelector('main > .table-card');
+  const statsEl    = document.querySelector('.stats');
+  const controlsEl = document.querySelector('.controls');
+  const bugTabsEl  = document.getElementById('bug-tabs');
+  const isSpecial  = view === 'agents' || view === 'companies' || view === 'reports';
+
+  agentsPanel.style.display    = view === 'agents'    ? 'block' : 'none';
+  companiesPanel.style.display = view === 'companies' ? 'block' : 'none';
+  if (reportsPanel) reportsPanel.style.display = view === 'reports' ? 'block' : 'none';
+
+  if (ticketTableCard) ticketTableCard.style.display = isSpecial ? 'none' : '';
+  if (statsEl)    statsEl.style.display    = isSpecial ? 'none' : 'grid';
+  if (controlsEl) controlsEl.style.display = isSpecial ? 'none' : 'flex';
+  if (bugTabsEl)  { bugTabsEl.classList.toggle('visible', !isSpecial && view === 'bugs'); }
+
+  if (view === 'reports') {
+    renderReports();
+  } else if (!isSpecial) {
+    render();
+  } else if (view === 'agents') {
+    renderAgents();
+  } else {
+    renderCompanies();
+  }
+}
+
+// ── Sidebar toggle ──
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const btn = document.getElementById('sidebar-open-btn');
+  sb.classList.toggle('collapsed');
+  btn.classList.toggle('visible', sb.classList.contains('collapsed'));
+}
+
+// ── Multi Client ID ──
+function addCidRow() {
+  const list = document.getElementById('cid-list');
+  const row = document.createElement('div');
+  row.className = 'cid-row';
+  row.innerHTML = `<input type="text" class="cid-input" placeholder="e.g. C-0099">
+    <button type="button" class="btn-remove-cid" onclick="this.parentElement.remove()" title="Remove">×</button>`;
+  list.appendChild(row);
+  row.querySelector('input').focus();
+}
+
+function openNew() {
+  document.getElementById('n-desc').value='';
+  document.getElementById('n-exchange').value='';
+  document.getElementById('cid-list').innerHTML =
+    `<div class="cid-row"><input type="text" class="cid-input" placeholder="e.g. C-0099"></div>`;
+  document.getElementById('add-error-wrap').style.display='none';
+  document.querySelectorAll('#n-error-checks input').forEach(c=>c.checked=false);
+  clearFile();
+
+  // Member ID field: hide & auto-assign if agent has exactly 1 company
+  const allCompanies = getCompanies();
+  const agentCos = (currentUser && currentUser.role !== 'superadmin' && (currentUser.companies||[]).length)
+    ? currentUser.companies : null;
+  const nmGroup  = document.getElementById('n-member-group');
+  const nmSelect = document.getElementById('n-member');
+
+  if (agentCos && agentCos.length === 1) {
+    // Single company — hide field, auto-set value
+    nmGroup.style.display = 'none';
+    nmSelect.innerHTML = `<option value="${agentCos[0]}" selected>${agentCos[0]}</option>`;
+  } else {
+    nmGroup.style.display = '';
+    const pool = agentCos
+      ? allCompanies.filter(c => agentCos.includes(c.mid))
+      : allCompanies;
+    nmSelect.innerHTML = `<option value="">— Select —</option>` +
+      pool.map(c => `<option value="${c.mid}">${c.mid} — ${c.name}</option>`).join('');
+  }
+
+  document.getElementById('modal-new').classList.add('open');
+}
+
+async function addTicket() {
+  const cids = [...document.querySelectorAll('.cid-input')].map(i=>i.value.trim()).filter(Boolean);
+  const member = document.getElementById('n-member').value;
+  const desc = document.getElementById('n-desc').value.trim();
+  const checked = [...document.querySelectorAll('#n-error-checks input:checked')].map(c=>c.value);
+  if(!cids.length){ alert('At least one Client ID is required.'); return; }
+  if(!member){ alert('Please select a Member ID.'); return; }
+  if(!checked.length){ alert('Select at least one error type.'); return; }
+  if(!desc){ alert('Please add a description.'); return; }
+
+  // Save all pending attachments to IndexedDB
+  const attachments = [];
+  for (const a of _pendingAttachments) {
+    if (a.file) {
+      const storageKey = `att_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+      try { await saveAttachment(storageKey, a.file); attachments.push({ name:a.name, type:a.file.type, storageKey }); }
+      catch(e) { attachments.push({ name:a.name, type:a.file.type, storageKey:null }); }
+    } else if (a.url) {
+      attachments.push({ name:a.name, type:'image/jpeg', url:a.url });
+    }
+  }
+
+  const dt = nowStr();
+  issues.unshift({
+    oid:genOID(), id:oidCounter, cids, cid:cids[0], member, errors:checked,
+    exchange:document.getElementById('n-exchange').value,
+    descs:[{text:desc, date:dt}], date:dt, status:'open', solution:'', priority:'',
+    attachments,
+    attachment: attachments[0] || null  // legacy compat
+  });
+  _pendingAttachments = [];
+  saveIssues();
+  closeModal('modal-new');
+  render();
+  showToast('New ticket added ✓', true);
+}
+
+function handleViewSubmit() {
+  const i = issues.find(x => x.id === viewTarget);
+  if (!i) return;
+  if (currentView === 'dashboard' && (i.status === 'open' || i.status === 'in-progress')) {
+    document.getElementById('submit-sol-details').innerHTML = `
+      <div class="info-item"><label>Order ID</label><p class="order-id">${i.oid}</p></div>
+      <div class="info-item"><label>Client ID</label><p><span class="client-id">${i.cid}</span></p></div>
+      <div class="info-item full"><label>Error Types</label><p>${i.errors.map(e=>`<span class="badge b-err">${e}</span>`).join(' ')}</p></div>`;
+    document.getElementById('submit-sol-type').value = '';
+    document.getElementById('modal-submit-sol').classList.add('open');
+  } else {
+    closeModal('modal-view');
+  }
+}
+
+function confirmSubmitSol() {
+  const sol = document.getElementById('submit-sol-type').value;
+  if (!sol) { alert('Please select a Solution Type.'); return; }
+  const i = issues.find(x => x.id === viewTarget);
+  if (i) { i.status = 'closed'; i.solution = sol; saveIssues(); }
+  closeModal('modal-submit-sol');
+  closeModal('modal-view');
+  showToast('Ticket closed ✓', true);
+  render();
+}
+
+function openAttLightbox(idx) {
+  const attDiv = document.getElementById('view-attachment');
+  const urls = attDiv._resolvedUrls || [];
+  const list = attDiv._attList || [];
+  const url = urls[idx]; if (!url) return;
+  const isVideo = list[idx] && list[idx].type && list[idx].type.startsWith('video/');
+  const lb = document.createElement('div');
+  lb.className = 'att-lightbox';
+  lb.innerHTML = isVideo
+    ? `<video src="${url}" controls style="max-width:92vw;max-height:92vh;border-radius:10px"></video>`
+    : `<img src="${url}" style="max-width:92vw;max-height:92vh;border-radius:10px">`;
+  lb.onclick = () => lb.remove();
+  document.body.appendChild(lb);
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if(id==='modal-action'){ actionTarget=null; actionMode=null; }
+  if(id==='modal-new'){ _pendingAttachments=[]; _renderPendingFiles(); document.getElementById('n-file').value=''; }
+}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('open'); }));
+
+// ── REPORTS ──
+let _reportRange = 'week';
+let _rptVolumeChart = null, _rptErrorChart = null;
+
+function setReportRange(range) {
+  _reportRange = range;
+  ['week','month','custom'].forEach(r => document.getElementById('rpt-'+r)?.classList.remove('active'));
+  document.getElementById('rpt-'+range)?.classList.add('active');
+  const customRow = document.getElementById('rpt-custom-range');
+  if (customRow) customRow.style.display = range === 'custom' ? 'flex' : 'none';
+  if (range !== 'custom') renderReports();
+}
+
+function getReportDateRange() {
+  const now = new Date();
+  let from, to = new Date(now);
+  to.setHours(23,59,59,999);
+  if (_reportRange === 'week') {
+    from = new Date(now); from.setDate(now.getDate() - 6); from.setHours(0,0,0,0);
+  } else if (_reportRange === 'month') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    const f = document.getElementById('rpt-from')?.value;
+    const t2 = document.getElementById('rpt-to')?.value;
+    from = f ? new Date(f) : new Date(now.getFullYear(), now.getMonth(), 1);
+    to   = t2 ? new Date(t2 + 'T23:59:59') : to;
+  }
+  return { from, to };
+}
+
+function renderReports() {
+  if (currentView !== 'reports') return;
+  const { from, to } = getReportDateRange();
+  const pool = issues.filter(i => { const d = new Date(i.date); return d >= from && d <= to; });
+
+  // Summary cards
+  const nTotal    = pool.length;
+  const nSolved   = pool.filter(i => i.status === 'closed').length;
+  const nBugSolved= pool.filter(i => i.status === 'bug-solved').length;
+  const nBugs     = pool.filter(i => i.status === 'bug' || i.status === 'new-bug' || i.status === 'old-bug' || i.status === 'manually-cleared').length;
+  const nManual   = pool.filter(i => i.status === 'manually-cleared').length;
+  const nOpen     = pool.filter(i => i.status === 'open' || i.status === 'in-progress').length;
+
+  const rptCard = (label, val, color) =>
+    `<div class="rpt-stat-card"><div class="rpt-stat-label">${label}</div><div class="rpt-stat-value" style="color:${color}">${val}</div></div>`;
+
+  document.getElementById('rpt-cards').innerHTML =
+    rptCard('Total Tickets', nTotal, '#1E293B') +
+    rptCard('Solved', nSolved + nBugSolved, '#059669') +
+    rptCard('Open / In Progress', nOpen, '#DC2626') +
+    rptCard('Active Bugs', nBugs, '#EA580C') +
+    rptCard('Manually Cleared', nManual, '#92400E');
+
+  // Volume chart — tickets per day
+  const days = [];
+  const dayCounts = {};
+  const cur = new Date(from);
+  while (cur <= to) {
+    const key = cur.toISOString().slice(0,10);
+    days.push(key);
+    dayCounts[key] = 0;
+    cur.setDate(cur.getDate() + 1);
+  }
+  pool.forEach(i => { const k = i.date.slice(0,10); if (dayCounts[k] !== undefined) dayCounts[k]++; });
+  const volLabels = days.map(d => { const dt = new Date(d+'T00:00:00'); return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); });
+  const volData   = days.map(d => dayCounts[d]);
+
+  if (_rptVolumeChart) _rptVolumeChart.destroy();
+  const volCtx = document.getElementById('rpt-volume-chart').getContext('2d');
+  _rptVolumeChart = new Chart(volCtx, {
+    type: 'bar',
+    data: { labels: volLabels, datasets: [{ label: 'Tickets', data: volData, backgroundColor: '#FB923C', borderRadius: 5 }] },
+    options: { responsive:true, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1, precision:0 } } } }
+  });
+
+  // Error frequency chart
+  const errCount = {};
+  pool.forEach(i => (i.errors||[]).forEach(e => { errCount[e] = (errCount[e]||0)+1; }));
+  const errEntries = Object.entries(errCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const errColors = ['#EA580C','#F97316','#FB923C','#FDBA74','#FED7AA','#DC2626','#EF4444','#F87171'];
+
+  if (_rptErrorChart) _rptErrorChart.destroy();
+  const errCtx = document.getElementById('rpt-error-chart').getContext('2d');
+  if (errEntries.length) {
+    _rptErrorChart = new Chart(errCtx, {
+      type: 'doughnut',
+      data: { labels: errEntries.map(e=>e[0]), datasets:[{ data: errEntries.map(e=>e[1]), backgroundColor: errColors, borderWidth:2 }] },
+      options: { responsive:true, plugins:{ legend:{ position:'right', labels:{ font:{size:11}, boxWidth:12 } } } }
+    });
+  } else {
+    errCtx.canvas.parentNode.innerHTML = '<div style="color:var(--gray-400);font-size:13px;text-align:center;padding:40px 0">No data</div>';
+  }
+
+  // Agent performance
+  const users = getUsers().filter(u => u.role !== 'superadmin');
+  const agentRows = users.map(u => {
+    const myTickets = pool.filter(i => i.agent === u.username || i.agentName === u.name);
+    const solved    = myTickets.filter(i => i.status === 'closed').length;
+    const bugSolved = myTickets.filter(i => i.status === 'bug-solved').length;
+    const bugs      = myTickets.filter(i => ['bug','new-bug','old-bug','manually-cleared'].includes(i.status)).length;
+    const manual    = myTickets.filter(i => i.status === 'manually-cleared').length;
+    return `<tr class="rpt-agent-row">
+      <td><strong>${u.name}</strong> <span style="font-size:11px;color:var(--gray-400)">(${u.username})</span></td>
+      <td style="text-align:center;font-weight:600">${myTickets.length}</td>
+      <td style="text-align:center;color:#059669;font-weight:600">${solved + bugSolved}</td>
+      <td style="text-align:center;color:#EA580C;font-weight:600">${bugs}</td>
+      <td style="text-align:center;color:#92400E;font-weight:600">${manual}</td>
+      <td style="text-align:center;color:var(--gray-400)">—</td>
+    </tr>`;
+  });
+  document.getElementById('rpt-agent-tbody').innerHTML = agentRows.length
+    ? agentRows.join('')
+    : '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:20px">No agent data in this period</td></tr>';
+
+  // Top errors list
+  const topErrors = Object.entries(errCount).sort((a,b)=>b[1]-a[1]);
+  const maxVal = topErrors[0]?.[1] || 1;
+  document.getElementById('rpt-top-errors').innerHTML = topErrors.length
+    ? topErrors.map(([err, cnt]) => `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:160px;font-size:12px;font-weight:600;color:var(--gray-700);flex-shrink:0">${err}</div>
+          <div style="flex:1;background:var(--orange-50);border-radius:4px;height:8px">
+            <div class="rpt-error-bar" style="width:${Math.round(cnt/maxVal*100)}%"></div>
+          </div>
+          <div style="width:30px;text-align:right;font-size:12px;font-weight:700;color:var(--orange-600)">${cnt}</div>
+        </div>`).join('')
+    : '<div style="color:var(--gray-400);font-size:13px">No error data in this period</div>';
+}
+
+function printReport() {
+  window.print();
+}
+
+function showToast(msg, success=false) {
+  const t=document.getElementById('toast'); t.textContent=msg;
+  t.className='toast'+(success?' success':'');
+  setTimeout(()=>t.classList.add('show'),10);
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// Restore session BEFORE first render so currentUser is set
+(function restoreSession() {
+  const savedUsername = localStorage.getItem('tkt_session');
+  if (!savedUsername) return;
+  const users = getUsers();
+  const u = users.find(x => x.username === savedUsername);
+  if (!u || u.active === false) { localStorage.removeItem('tkt_session'); return; }
+  currentUser = u;
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('footer-username').textContent = u.name;
+  if (u.role === 'superadmin') {
+    ['dashboard','history','bugs'].forEach(v => { const n=document.getElementById(`nav-${v}`); if(n) n.style.display='flex'; });
+    document.getElementById('nav-agents').style.display = 'flex';
+    document.getElementById('nav-companies').style.display = 'flex';
+    document.getElementById('nav-reports').style.display = 'flex';
+  } else {
+    const allowed = u.views && u.views.length ? u.views : ['dashboard','history','bugs'];
+    ['dashboard','history','bugs'].forEach(v => {
+      const n = document.getElementById(`nav-${v}`);
+      if (n) n.style.display = allowed.includes(v) ? 'flex' : 'none';
+    });
+  }
+})();
+
+// Init — load from Supabase then render
+(async function init() {
+  document.getElementById('sb-loading').style.display = 'flex';
+  await sbLoadAll();
+  // Refresh ERROR_TYPES after loading custom errors from Supabase
+  ERROR_TYPES = [...new Set([...DEFAULT_ERROR_TYPES, ...getCustomErrorTypes()])].sort();
+  document.getElementById('sb-loading').style.display = 'none';
+  rebuildMemberDropdowns();
+  updateStatusFilter('dashboard');
+  document.getElementById('sb-all')?.classList.add('active');
+  render();
+  if (currentUser) {
+    if (currentUser.role === 'superadmin') { updateAgentCount(); updateCompanyCount(); switchView('dashboard'); }
+    else { const a = currentUser.views && currentUser.views.length ? currentUser.views : ['dashboard','history','bugs']; switchView(a[0]); }
+  }
+})();
+
+// Prevent browser from navigating if file dropped outside the zone
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop',     e => e.preventDefault());
+
+// drag-and-drop handled via inline ondrop/ondragover on #upload-zone
+
+// ── Clipboard paste support (Ctrl+V image while new-ticket modal is open) ──
+document.addEventListener('paste', function(e) {
+  const modal = document.getElementById('modal-new');
+  if (!modal || !modal.classList.contains('open')) return;
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  let added = false;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.startsWith('image/')) {
+      e.preventDefault();
+      const file = items[i].getAsFile();
+      if (file) { _addPendingFile(file); added = true; }
+    }
+  }
+});
+
+</script>
+</body>
+</html>
