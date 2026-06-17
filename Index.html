@@ -1365,11 +1365,15 @@ function render() {
 
         if (showSolved) {
           const res = g.tickets[0]?.bugResolution || {};
+          const teamVal = g.team || '—';
+          const solVal  = res.solution || g.solution || '—';
           return `<tr class="is-bug" onclick="viewBugGroup(${idx})">
             <td><div class="err-tags">${errHtml}</div></td>
             <td><span style="display:inline-flex;align-items:center;gap:4px;background:var(--orange-100);color:var(--orange-700);font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;cursor:pointer">👥 ${allCids.length}</span></td>
             <td>${exchHtml}</td>
-            <td colspan="3" style="font-size:12px;color:var(--gray-600)">${res.note?`<span style="color:var(--gray-400)">"${res.note.slice(0,50)}${res.note.length>50?'…':''}"</span>`:'—'}</td>
+            <td style="font-size:12px;color:var(--gray-500)">—</td>
+            <td style="font-size:12px;color:var(--gray-700);font-weight:600">${teamVal}</td>
+            <td style="font-size:12px;color:var(--gray-600)">${solVal !== '—' ? `<span class="badge" style="background:#EDE9FE;color:#5B21B6;font-size:11px">${solVal}</span>` : '—'}</td>
             <td style="font-size:11px;color:var(--gray-500)">${g.date}</td>
             <td style="font-size:11px;color:var(--gray-500)">${res.date||lastUpdated}</td>
             <td><span class="badge b-closed" style="background:#D1FAE5;color:#065F46">✅ Solved</span></td>
