@@ -199,6 +199,10 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
 .b-pri-high { background:#FEE2E2; color:#991B1B; }
 .b-pri-med  { background:#FEF3C7; color:#92400E; }
 .b-pri-low  { background:#ECFDF5; color:#065F46; }
+.b-sev-critical { background:#FEE2E2; color:#991B1B; font-weight:700; }
+.b-sev-high     { background:#FFEDD5; color:#9A3412; font-weight:700; }
+.b-sev-medium   { background:#FEF3C7; color:#92400E; font-weight:700; }
+.b-sev-low      { background:#D1FAE5; color:#065F46; font-weight:700; }
 .pri-select { padding:3px 6px; border:1px solid var(--orange-200); border-radius:6px; font-size:11px; color:var(--gray-700); background:var(--orange-50); font-family:inherit; cursor:pointer; max-width:105px; }
 
 /* ── FILE UPLOAD ── */
@@ -291,6 +295,7 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
 .agent-role-pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; }
 .agent-role-pill.superadmin { background:#FEF3C7; color:#92400E; }
 .agent-role-pill.agent { background:#FFEDD5; color:#C2410C; }
+.agent-role-pill.subadmin { background:#EDE9FE; color:#5B21B6; }
 .btn-del-agent { font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px; border:1px solid #FECDD3; background:#FFF1F2; color:#BE123C; cursor:pointer; font-family:inherit; transition:background .15s; }
 .btn-del-agent:hover { background:#FFE4E6; }
 .btn-deact-agent { font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px; border:1px solid var(--orange-200); background:var(--orange-50); color:var(--orange-700); cursor:pointer; font-family:inherit; transition:background .15s; }
@@ -784,6 +789,13 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Username *</label><input type="text" id="a-uname" placeholder="e.g. john_s" autocomplete="off"></div>
       <div class="form-group"><label class="form-label">Password *</label><input type="password" id="a-pass" placeholder="Set a password" autocomplete="new-password"></div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select id="a-role" style="width:100%;border:1px solid var(--orange-200);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:#FFF7ED">
+            <option value="agent">Agent</option>
+            <option value="subadmin">Sub Admin</option>
+          </select>
+        </div>
       <div class="form-group">
         <label class="form-label">View Access</label>
         <div class="perm-check-row">
@@ -1002,7 +1014,7 @@ function doLogin() {
   localStorage.setItem('tkt_session', match.username);
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('footer-username').textContent = match.name;
-  if (match.role === 'superadmin') {
+  if (match.role === 'superadmin' || match.role === 'subadmin') {
     ['dashboard','history','bugs'].forEach(v => { const n=document.getElementById(`nav-${v}`); if(n) n.style.display='flex'; });
     document.getElementById('nav-agents').style.display = 'flex';
     document.getElementById('nav-companies').style.display = 'flex';
@@ -1056,16 +1068,18 @@ function renderAgents() {
       ? `<span class="agent-status-pill ${isActive?'active':'inactive'}">${isActive?'Active':'Inactive'}</span>`
       : '<span style="font-size:11px;color:var(--gray-400)">—</span>';
     const actionCell = u.role !== 'superadmin'
-      ? `<div style="display:flex;gap:5px;flex-wrap:wrap">
-           <button class="btn-deact-agent${isActive?'':' reactivate'}" onclick="toggleAgentActive('${u.username}')">${isActive?'Deactivate':'Activate'}</button>
-           <button class="btn-del-agent" onclick="deleteAgent('${u.username}')">Remove</button>
-         </div>`
+      ? currentUser && currentUser.role === 'subadmin'
+        ? '<span style="font-size:11px;color:var(--gray-400)">—</span>'
+        : `<div style="display:flex;gap:5px;flex-wrap:wrap">
+             <button class="btn-deact-agent${isActive?'':' reactivate'}" onclick="toggleAgentActive('${u.username}')">${isActive?'Deactivate':'Activate'}</button>
+             <button class="btn-del-agent" onclick="deleteAgent('${u.username}')">Remove</button>
+           </div>`
       : '<span style="font-size:11px;color:var(--gray-400)">—</span>';
-    const rowClick = u.role !== 'superadmin' ? `onclick="openEditAgent('${u.username}')" style="cursor:pointer"` : '';
+    const rowClick = u.role !== 'superadmin' && currentUser && currentUser.role !== 'subadmin' ? `onclick="openEditAgent('${u.username}')" style="cursor:pointer"` : '';
     return `<tr ${rowClick}>
       <td style="color:var(--gray-400);font-size:11px">${idx+1}</td>
       <td><code style="background:var(--orange-50);padding:2px 7px;border-radius:4px;font-size:12px;color:var(--orange-700);border:1px solid var(--orange-200)">${u.username}</code></td>
-      <td><span class="agent-role-pill ${u.role}">${u.role==='superadmin'?'Super Admin':'Agent'}</span></td>
+      <td><span class="agent-role-pill ${u.role}">${u.role==='superadmin'?'Super Admin':u.role==='subadmin'?'Sub Admin':'Agent'}</span></td>
       <td>${statusCell}</td>
       <td>${viewTags}</td>
       <td>${coTags}</td>
@@ -1077,6 +1091,7 @@ function renderAgents() {
 
 function openAddAgent() {
   ['a-uname','a-pass'].forEach(id => document.getElementById(id).value = '');
+  const aRole = document.getElementById('a-role'); if (aRole) aRole.value = 'agent';
   ['dashboard','history','bugs'].forEach(v => { document.getElementById(`a-view-${v}`).checked = true; });
   const companies = getCompanies();
   document.getElementById('a-companies-list').innerHTML = companies.map(c =>
@@ -1095,7 +1110,8 @@ function confirmAddAgent() {
   const companies = [...document.querySelectorAll('.a-co-check:checked')].map(el => el.value);
   const users = getUsers();
   if (users.find(u => u.username === uname)) { alert('Username already exists.'); return; }
-  users.push({ username: uname, password: pass, name: uname, role: 'agent', created: new Date().toISOString().slice(0,10), active: true, views, companies });
+  const roleVal = document.getElementById('a-role')?.value || 'agent';
+  users.push({ username: uname, password: pass, name: uname, role: roleVal, created: new Date().toISOString().slice(0,10), active: true, views, companies });
   saveUsers(users);
   closeModal('modal-agent');
   renderAgents();
@@ -1327,7 +1343,7 @@ let _pendingAttachments = []; // { file, url, name, previewSrc }
 function genOID() { const o = 'TKT-' + String(oidCounter++).padStart(5,'0'); saveOidCounter(); return o; }
 function nowStr()  { return new Date().toISOString().slice(0,16).replace('T',' '); }
 function agentCompanyFilter(arr) {
-  if (!currentUser || currentUser.role === 'superadmin') return arr;
+  if (!currentUser || currentUser.role === 'superadmin' || currentUser.role === 'subadmin') return arr;
   const cos = currentUser.companies || [];
   if (!cos.length) return arr;
   return arr.filter(i => cos.includes(i.member));
@@ -1393,7 +1409,7 @@ function render() {
   if (currentView === 'bugs') {
     const showSolved = bugSubFilter === 'solved';
     let groups = getBugGroups(showSolved);
-    const coFilter = currentUser && currentUser.role !== 'superadmin' && (currentUser.companies||[]).length > 0 ? currentUser.companies : null;
+    const coFilter = currentUser && currentUser.role !== 'superadmin' && currentUser.role !== 'subadmin' && (currentUser.companies||[]).length > 0 ? currentUser.companies : null;
     if (coFilter) groups = groups.filter(g => g.tickets.some(t => coFilter.includes(t.member)));
     if (q || fe || fx || fm || fd1 || fd2) {
       groups = groups.filter(g => {
@@ -1432,7 +1448,7 @@ function render() {
             <td><span style="display:inline-flex;align-items:center;gap:4px;background:var(--orange-100);color:var(--orange-700);font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;cursor:pointer">👥 ${allCids.length}</span></td>
             <td>${exchHtml}</td>
             <td style="font-size:12px;color:var(--gray-500)">—</td>
-            <td style="font-size:12px;color:var(--gray-700);font-weight:600">${teamVal}</td>
+            <td style="font-size:12px;color:var(--gray-700);font-weight:600">${teamVal}${g.severity ? ` <span class="badge b-sev-${g.severity.toLowerCase()}" style="font-size:10px">${g.severity}</span>` : ''}</td>
             <td style="font-size:12px;color:var(--gray-600)">${solVal !== '—' ? `<span class="badge" style="background:#EDE9FE;color:#5B21B6;font-size:11px">${solVal}</span>` : '—'}</td>
             <td style="font-size:11px;color:var(--gray-500)">${g.date}</td>
             <td style="font-size:11px;color:var(--gray-500)">${res.date||lastUpdated}</td>
@@ -1455,15 +1471,22 @@ function render() {
           <option value="">— Select —</option>
           ${SOL_TYPES.map(s=>`<option value="${s}"${g.solution===s?' selected':''}>${s}</option>`).join('')}
         </select>`;
+        const sevSelect = `<select class="pri-select" onclick="event.stopPropagation()" onchange="setBugGroupSeverity(${idx},this.value)" style="max-width:110px">
+          <option value="">— Severity —</option>
+          <option value="Critical"${g.severity==='Critical'?' selected':''}>🔴 Critical</option>
+          <option value="High"${g.severity==='High'?' selected':''}>🟠 High</option>
+          <option value="Medium"${g.severity==='Medium'?' selected':''}>🟡 Medium</option>
+          <option value="Low"${g.severity==='Low'?' selected':''}>🟢 Low</option>
+        </select>`;
         return `<tr class="is-bug" onclick="viewBugGroup(${idx})">
           <td><div class="err-tags">${errHtml}</div></td>
-          <td><span style="display:inline-flex;align-items:center;gap:4px;background:var(--orange-100);color:var(--orange-700);font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;cursor:pointer">👥 ${allCids.length}</span></td>
+          <td><span style="display:inline-flex;align-items:center;gap:4px;background:${allCids.length>=5?'#FEE2E2':'var(--orange-100)'};color:${allCids.length>=5?'#991B1B':'var(--orange-700)'};font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;cursor:pointer">${allCids.length>=5?'🚨':'👥'} ${allCids.length}${allCids.length>=5?' affected':''}</span></td>
           <td>${exchHtml}</td>
-          <td onclick="event.stopPropagation()">${priSelect}</td>
+          <td onclick="event.stopPropagation()" style="display:flex;flex-direction:column;gap:4px">${priSelect}${sevSelect}</td>
           <td onclick="event.stopPropagation()">${teamSelect}</td>
           <td onclick="event.stopPropagation()">${solSelect}</td>
           <td style="font-size:11px;color:var(--gray-500)">${g.date}</td>
-          <td style="font-size:11px;color:var(--orange-600);font-weight:500">${lastUpdated !== g.date ? lastUpdated : '—'}</td>
+          <td style="font-size:11px;color:var(--orange-600);font-weight:500">${lastUpdated !== g.date ? lastUpdated : '—'}${getBugRecurrence(g.errors)>0?`<br><span style="font-size:10px;background:#EDE9FE;color:#5B21B6;padding:1px 5px;border-radius:8px;font-weight:600">↩ ${getBugRecurrence(g.errors)}x recurrence</span>`:''}</td>
           <td onclick="event.stopPropagation()"><button class="btn-action btn-solve" style="font-size:11px;padding:4px 10px" onclick="openSolveBug('group',${idx})">✓ Bug Resolved</button></td>
         </tr>`;
       }).join('');
@@ -1773,6 +1796,7 @@ function confirmAction() {
     showToast('Reported as Bug 🐛');
   }
   saveIssues();
+  if (actionMode === 'bug') checkBugThreshold(i.errors || []);
   closeModal('modal-action');
   closeModal('modal-view');
   render();
@@ -1800,12 +1824,13 @@ function getBugGroups(solved = false) {
     const day = i.date.slice(0, 10);
     const key = [...i.errors].sort().join('|||') + '::' + day;
     if (!map[key]) {
-      map[key] = { key, errors: i.errors, date: day, status: i.status, priority: i.priority || '', solution: i.solution || '', team: i.bugTeam || '', tickets: [] };
+      map[key] = { key, errors: i.errors, date: day, status: i.status, priority: i.priority || '', solution: i.solution || '', team: i.bugTeam || '', severity: i.severity || '', tickets: [] };
     }
     map[key].tickets.push(i);
-    if (!map[key].priority && i.priority) map[key].priority = i.priority;
-    if (!map[key].solution && i.solution) map[key].solution = i.solution;
-    if (!map[key].team && i.bugTeam)      map[key].team = i.bugTeam;
+    if (!map[key].priority && i.priority)   map[key].priority = i.priority;
+    if (!map[key].solution && i.solution)   map[key].solution = i.solution;
+    if (!map[key].team && i.bugTeam)        map[key].team = i.bugTeam;
+    if (!map[key].severity && i.severity)   map[key].severity = i.severity;
   });
   return Object.values(map);
 }
@@ -1852,6 +1877,16 @@ function isRepeatClient(cid) {
   const errorCounts = {};
   clientTickets.forEach(t => t.errors.forEach(e => { errorCounts[e] = (errorCounts[e]||0)+1; }));
   return Object.values(errorCounts).some(c => c > 1);
+}
+
+function getBugRecurrence(errors) {
+  // Count how many distinct historical bug groups had these error types
+  const solved = issues.filter(i => i.status === 'bug-solved' || (i.status === 'manually-cleared' && i.bugResolved));
+  const groups = {};
+  solved.forEach(i => {
+    i.errors.forEach(e => { if (!groups[e]) groups[e] = 0; groups[e]++; });
+  });
+  return errors.reduce((sum, e) => sum + (groups[e] || 0), 0);
 }
 
 function openClientModal(cid) {
@@ -2007,6 +2042,7 @@ function viewBugGroup(idx) {
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
       <span class="badge ${ST_CLASS[g.status]}">${ST_LABEL[g.status]}</span>
       ${g.priority ? `<span class="badge ${PRI_CLASS[g.priority]||''}" style="font-size:11px">${g.priority} Priority</span>` : ''}
+      ${g.severity ? `<span class="badge b-sev-${g.severity.toLowerCase()}" style="font-size:11px">${g.severity} Severity</span>` : ''}
       ${g.team ? `<span style="font-size:11px;background:#EDE9FE;color:#5B21B6;padding:2px 8px;border-radius:10px;font-weight:600">${g.team}</span>` : ''}
       ${g.solution ? `<span class="badge b-sol-perm" style="font-size:11px">${g.solution}</span>` : ''}
       <span style="font-size:11px;color:var(--gray-500);margin-left:auto">${g.tickets.length} ticket(s) affected</span>
@@ -2114,6 +2150,30 @@ function setBugGroupTeam(idx, val) {
   g.team = val;
   saveIssues();
   showToast(val ? `Team set: ${val}` : 'Team cleared', !!val);
+}
+
+function setBugGroupSeverity(idx, val) {
+  const g = bugGroups[idx];
+  if (!g) return;
+  g.tickets.forEach(t => {
+    const issue = issues.find(x => x.id === t.id);
+    if (issue) issue.severity = val;
+  });
+  g.severity = val;
+  saveIssues();
+  render();
+}
+
+function checkBugThreshold(errors) {
+  const THRESHOLD = 5;
+  const activeGroups = getBugGroups(false);
+  const matching = activeGroups.filter(g => g.errors.some(e => errors.includes(e)));
+  matching.forEach(g => {
+    const allCids = [...new Set(g.tickets.flatMap(t => t.cids || [t.cid]).filter(Boolean))];
+    if (allCids.length === THRESHOLD) { // exactly hit threshold (not already over)
+      showToast(`🚨 Alert: ${g.errors[0]} now has ${THRESHOLD}+ clients affected!`, false);
+    }
+  });
 }
 
 // ── IndexedDB for attachments ──
@@ -2379,7 +2439,7 @@ function openNew(mode) {
 
   // Member ID field: hide & auto-assign if agent has exactly 1 company
   const allCompanies = getCompanies();
-  const agentCos = (currentUser && currentUser.role !== 'superadmin' && (currentUser.companies||[]).length)
+  const agentCos = (currentUser && currentUser.role !== 'superadmin' && currentUser.role !== 'subadmin' && (currentUser.companies||[]).length)
     ? currentUser.companies : null;
   const nmGroup  = document.getElementById('n-member-group');
   const nmSelect = document.getElementById('n-member');
@@ -2435,7 +2495,7 @@ async function addTicket() {
   saveIssues();
   closeModal('modal-new');
   const isBugMode = document.getElementById('modal-new').dataset.mode === 'bug';
-  if (isBugMode) { switchView('bugs'); showToast('Bug reported ✓', true); }
+  if (isBugMode) { checkBugThreshold(checked); switchView('bugs'); showToast('Bug reported ✓', true); }
   else { render(); showToast('New ticket added ✓', true); }
 }
 
@@ -2698,7 +2758,7 @@ function showToast(msg, success=false) {
   document.getElementById('sb-all')?.classList.add('active');
   render();
   if (currentUser) {
-    if (currentUser.role === 'superadmin') { updateAgentCount(); updateCompanyCount(); switchView('dashboard'); }
+    if (currentUser.role === 'superadmin' || currentUser.role === 'subadmin') { updateAgentCount(); updateCompanyCount(); switchView('dashboard'); }
     else { const a = currentUser.views && currentUser.views.length ? currentUser.views : ['dashboard','history','bugs']; switchView(a[0]); }
   }
 })();
