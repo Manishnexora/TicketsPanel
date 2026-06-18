@@ -1910,7 +1910,7 @@ function closeClientModal() {
 function shareTicket() {
   const issue = issues.find(x => x.id === viewTarget);
   if (!issue) return;
-  const base = window.location.href.split('?')[0];
+  const base = 'https://manishnexora.github.io/TicketsPanel/Index.html';
   const url = `${base}?ticket=${issue.oid}`;
   navigator.clipboard.writeText(url).then(() => showToast('Link copied! 🔗', true)).catch(() => {
     prompt('Copy this link:', url);
