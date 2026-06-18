@@ -566,7 +566,10 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
         <h3 id="view-oid"></h3>
         <div class="sub" id="view-sub"></div>
       </div>
-      <button class="btn-close-modal" onclick="closeModal('modal-view')">✕</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="btn-share-ticket" onclick="shareTicket()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid #FED7AA;background:#FFF7ED;color:#C2410C;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🔗 Share</button>
+        <button class="btn-close-modal" onclick="closeModal('modal-view')">✕</button>
+      </div>
     </div>
     <div class="modal-body">
       <div class="info-grid" id="view-meta"></div>
@@ -585,6 +588,15 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
     <!-- action buttons shown only in dashboard view -->
     <div class="view-actions" id="view-action-bar">
       <span class="view-actions-label">Actions:</span>
+    </div>
+    <!-- Client Comments -->
+    <div id="agent-comments-section" style="padding:0 22px 14px;border-top:1px solid var(--orange-100);margin-top:4px">
+      <div style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px">💬 Client Comments</div>
+      <div id="agent-comment-thread" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;margin-bottom:10px"></div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="agent-reply-input" placeholder="Reply to client…" style="flex:1;border:1px solid var(--orange-200);border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;background:#FFF7ED">
+        <button onclick="submitAgentReply()" style="background:#EA580C;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Reply</button>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-confirm blue" id="btn-view-submit" onclick="handleViewSubmit()">Submit</button>
@@ -873,6 +885,29 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
   </div>
 </div>
 
+<!-- ══ PUBLIC TICKET VIEW ══ -->
+<div id="public-ticket-view" style="display:none;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#FFF7ED 0%,#FFEDD5 100%);align-items:center;justify-content:center;font-family:inherit">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.12);padding:36px 40px;max-width:480px;width:90%;border:1px solid #FED7AA">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+      <span style="font-size:28px">🎫</span>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#9A3412;text-transform:uppercase;letter-spacing:.08em">Ticket Status</div>
+        <div style="font-size:18px;font-weight:700;color:#1C1917" id="pub-oid">—</div>
+      </div>
+    </div>
+    <div id="pub-body" style="color:#44403C"></div>
+    <div id="pub-comments-section" style="margin-top:24px;border-top:1px solid #FFEDD5;padding-top:16px">
+      <div style="font-size:12px;font-weight:700;color:#9A3412;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">💬 Comments</div>
+      <div id="pub-comment-thread" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:200px;overflow-y:auto"></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input type="text" id="pub-comment-name" placeholder="Your name (optional)" style="border:1px solid #FED7AA;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;background:#FFF7ED;color:#1C1917;outline:none">
+        <textarea id="pub-comment-text" placeholder="Write a comment…" rows="3" style="border:1px solid #FED7AA;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;background:#FFF7ED;color:#1C1917;outline:none;resize:none"></textarea>
+        <button onclick="submitClientComment()" style="background:#EA580C;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Send Comment</button>
+      </div>
+    </div>
+    <div style="margin-top:24px;padding-top:16px;border-top:1px solid #FFEDD5;font-size:11px;color:#A8A29E;text-align:center">Powered by Tickets Panel</div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- Supabase loading overlay -->
@@ -908,13 +943,14 @@ async function sbSaveAppData(key, value) {
 
 async function sbLoadAll() {
   try {
-    const [ticketsRes, usersRes, companiesRes, errorsRes, oidRes, clientRes] = await Promise.all([
+    const [ticketsRes, usersRes, companiesRes, errorsRes, oidRes, clientRes, commentsRes] = await Promise.all([
       _sb.from('tickets').select('data').order('created_at', { ascending: true }),
       _sb.from('app_data').select('value').eq('key', 'tkt_users').maybeSingle(),
       _sb.from('app_data').select('value').eq('key', 'tkt_companies').maybeSingle(),
       _sb.from('app_data').select('value').eq('key', 'tkt_custom_errors').maybeSingle(),
       _sb.from('app_data').select('value').eq('key', 'tkt_oid_counter').maybeSingle(),
       _sb.from('app_data').select('value').eq('key', 'tkt_client_data').maybeSingle(),
+      _sb.from('app_data').select('value').eq('key', 'tkt_comments').maybeSingle(),
     ]);
     if (ticketsRes.data && ticketsRes.data.length) {
       issues = ticketsRes.data.map(r => r.data);
@@ -925,6 +961,7 @@ async function sbLoadAll() {
     if (errorsRes.data) localStorage.setItem('tkt_custom_errors', JSON.stringify(errorsRes.data.value));
     if (oidRes.data) { oidCounter = oidRes.data.value; localStorage.setItem('tkt_oid_counter', String(oidCounter)); }
     if (clientRes.data) localStorage.setItem('tkt_client_data', JSON.stringify(clientRes.data.value));
+    if (commentsRes.data) localStorage.setItem('tkt_comments', JSON.stringify(commentsRes.data.value));
   } catch(e) { console.warn('Supabase load failed, using local data:', e); }
 }
 
@@ -1657,6 +1694,7 @@ function viewTicket(id) {
     submitBtn.onclick = () => closeModal('modal-view');
   }
 
+  renderAgentComments(i.oid);
   document.getElementById('modal-view').classList.add('open');
 }
 
@@ -1800,6 +1838,15 @@ function saveClientData(data) {
   sbSaveAppData('tkt_client_data', data);
 }
 
+function getComments() {
+  try { return JSON.parse(localStorage.getItem('tkt_comments') || '{}'); }
+  catch(e) { return {}; }
+}
+function saveComments(data) {
+  localStorage.setItem('tkt_comments', JSON.stringify(data));
+  sbSaveAppData('tkt_comments', data);
+}
+
 function isRepeatClient(cid) {
   const clientTickets = issues.filter(i => (i.cids || [i.cid]).includes(cid));
   const errorCounts = {};
@@ -1858,6 +1905,85 @@ function openClientModal(cid) {
 
 function closeClientModal() {
   document.getElementById('modal-client').style.display = 'none';
+}
+
+function shareTicket() {
+  const issue = issues.find(x => x.id === viewTarget);
+  if (!issue) return;
+  const base = window.location.href.split('?')[0];
+  const url = `${base}?ticket=${issue.oid}`;
+  navigator.clipboard.writeText(url).then(() => showToast('Link copied! 🔗', true)).catch(() => {
+    prompt('Copy this link:', url);
+  });
+}
+
+let _pubTicketOID = null;
+
+function renderPublicComments(oid) {
+  const all = getComments();
+  const thread = all[oid] || [];
+  const el = document.getElementById('pub-comment-thread');
+  if (!el) return;
+  if (!thread.length) { el.innerHTML = `<div style="font-size:12px;color:#A8A29E;text-align:center;padding:8px">No comments yet.</div>`; return; }
+  el.innerHTML = thread.map(c => {
+    const isAgent = c.from === 'agent';
+    return `<div style="background:${isAgent?'#EDE9FE':'#F0FDF4'};border-radius:10px;padding:10px 12px;border:1px solid ${isAgent?'#DDD6FE':'#BBF7D0'}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:12px;font-weight:700;color:${isAgent?'#5B21B6':'#065F46'}">${isAgent?'🛠 '+c.name:'👤 '+(c.name||'Client')}</span>
+        <span style="font-size:10px;color:#A8A29E">${c.date?.slice(0,16)||''}</span>
+      </div>
+      <div style="font-size:13px;color:#1C1917">${c.text}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function submitClientComment() {
+  const name = document.getElementById('pub-comment-name')?.value.trim() || 'Client';
+  const text = document.getElementById('pub-comment-text')?.value.trim();
+  if (!text) return;
+  const oid = _pubTicketOID;
+  if (!oid) return;
+  const all = getComments();
+  if (!all[oid]) all[oid] = [];
+  all[oid].push({ from:'client', name, text, date: new Date().toISOString().slice(0,16).replace('T',' ') });
+  saveComments(all);
+  document.getElementById('pub-comment-text').value = '';
+  renderPublicComments(oid);
+}
+
+function renderAgentComments(oid) {
+  const all = getComments();
+  const thread = all[oid] || [];
+  const el = document.getElementById('agent-comment-thread');
+  if (!el) return;
+  if (!thread.length) { el.innerHTML = `<div style="font-size:12px;color:var(--gray-400);text-align:center;padding:6px">No client comments yet.</div>`; return; }
+  el.innerHTML = thread.map(c => {
+    const isAgent = c.from === 'agent';
+    return `<div style="background:${isAgent?'#EDE9FE':'var(--orange-50)'};border-radius:8px;padding:8px 10px;border:1px solid ${isAgent?'#DDD6FE':'var(--orange-200)'}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span style="font-size:11px;font-weight:700;color:${isAgent?'#5B21B6':'var(--orange-700)'}">${isAgent?'🛠 '+c.name:'👤 '+(c.name||'Client')}</span>
+        <span style="font-size:10px;color:var(--gray-400)">${c.date?.slice(0,16)||''}</span>
+      </div>
+      <div style="font-size:12px;color:var(--gray-700)">${c.text}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function submitAgentReply() {
+  const input = document.getElementById('agent-reply-input');
+  const text = input?.value.trim();
+  if (!text) return;
+  const issue = issues.find(x => x.id === viewTarget);
+  if (!issue) return;
+  const all = getComments();
+  if (!all[issue.oid]) all[issue.oid] = [];
+  all[issue.oid].push({ from:'agent', name: currentUser?.name || 'Agent', text, date: new Date().toISOString().slice(0,16).replace('T',' ') });
+  saveComments(all);
+  input.value = '';
+  renderAgentComments(issue.oid);
+  showToast('Reply sent ✓', true);
 }
 
 function saveClientNote(cid) {
@@ -2527,6 +2653,41 @@ function showToast(msg, success=false) {
 
 // Init — load from Supabase then render
 (async function init() {
+  // ── Public ticket link check ──
+  const _pubOID = new URLSearchParams(window.location.search).get('ticket');
+  if (_pubOID) {
+    document.getElementById('sb-loading').style.display = 'flex';
+    await sbLoadAll();
+    document.getElementById('sb-loading').style.display = 'none';
+    const ticket = issues.find(i => i.oid === _pubOID);
+    const pubView = document.getElementById('public-ticket-view');
+    const pubOidEl = document.getElementById('pub-oid');
+    const pubBody = document.getElementById('pub-body');
+    pubView.style.display = 'flex';
+    _pubTicketOID = _pubOID;
+    renderPublicComments(_pubOID);
+    if (!ticket) {
+      pubOidEl.textContent = _pubOID;
+      pubBody.innerHTML = `<div style="text-align:center;padding:20px;color:#DC2626">Ticket not found or may have been removed.</div>`;
+    } else {
+      const ST_LABEL_PUB = { 'open':'Open','in-progress':'In Progress','closed':'Closed','bug':'Under Investigation','bug-solved':'Resolved','manually-cleared':'Cleared','new-bug':'Under Investigation','old-bug':'Under Investigation' };
+      const ST_COLOR = { 'open':'#FEF3C7;color:#92400E','in-progress':'#DBEAFE;color:#1E40AF','closed':'#D1FAE5;color:#065F46','bug':'#FEE2E2;color:#991B1B','bug-solved':'#D1FAE5;color:#065F46','manually-cleared':'#D1FAE5;color:#065F46','new-bug':'#FEE2E2;color:#991B1B','old-bug':'#FEE2E2;color:#991B1B' };
+      const statusLabel = ST_LABEL_PUB[ticket.status] || ticket.status;
+      const statusColor = ST_COLOR[ticket.status] || '#F3F4F6;color:#374151';
+      const lastUpdated = ticket.descs && ticket.descs.length > 1 ? ticket.descs[ticket.descs.length-1].date : ticket.date;
+      pubOidEl.textContent = ticket.oid;
+      pubBody.innerHTML = `
+        <div style="text-align:center;margin-bottom:20px">
+          <span style="background:${statusColor};font-size:14px;font-weight:700;padding:8px 20px;border-radius:20px;display:inline-block">${statusLabel}</span>
+        </div>
+        <div style="display:grid;gap:12px">
+          ${ticket.exchange ? `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #FFEDD5"><span style="font-size:13px;color:#78716C">Exchange</span><span style="font-size:13px;font-weight:600;color:#1C1917">${ticket.exchange}</span></div>` : ''}
+          <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #FFEDD5"><span style="font-size:13px;color:#78716C">Date Reported</span><span style="font-size:13px;font-weight:600;color:#1C1917">${ticket.date?.slice(0,10)||'—'}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:10px 0"><span style="font-size:13px;color:#78716C">Last Updated</span><span style="font-size:13px;font-weight:600;color:#1C1917">${lastUpdated?.slice(0,10)||'—'}</span></div>
+        </div>`;
+    }
+    return; // Stop init — don't load the full app
+  }
   document.getElementById('sb-loading').style.display = 'flex';
   await sbLoadAll();
   // Refresh ERROR_TYPES after loading custom errors from Supabase
