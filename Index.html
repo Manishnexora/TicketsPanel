@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tickets</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23EA580C'/><text y='.9em' font-size='70' x='50%' text-anchor='middle' dominant-baseline='auto' dy='15'>🎫</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -667,12 +668,16 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
       <div class="two-col">
         <div class="form-group" style="grid-column:1/-1">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <label class="form-label" style="margin:0">Client ID(s) *</label>
-            <button type="button" class="btn-add-cid" onclick="addCidRow()">
+            <label class="form-label" style="margin:0">Client ID(s) <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>
+            <button type="button" class="btn-add-cid" id="btn-add-cid" onclick="addCidRow()">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Client ID
             </button>
           </div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;font-size:13px;color:var(--gray-700)">
+            <input type="checkbox" id="chk-system-wide" onchange="toggleSystemWide(this.checked)" style="width:15px;height:15px;accent-color:#EA580C;cursor:pointer">
+            <span>🌐 Affects all clients <span style="color:var(--gray-400);font-weight:400">(system-wide issue)</span></span>
+          </label>
           <div id="cid-list">
             <div class="cid-row"><input type="text" class="cid-input" placeholder="e.g. C-0099"></div>
           </div>
@@ -1460,7 +1465,11 @@ function render() {
       const clientData = getClientData();
       const hasNote = clientData[cidArr[0]]?.note;
       const isRepeat = isRepeatClient(cidArr[0]);
-      const cidHtml = `<span class="client-id" onclick="event.stopPropagation();openClientModal('${cidArr[0]}')" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted">${cidArr[0]}</span>${isRepeat ? `<span title="Repeat client" style="font-size:10px;margin-left:3px">🔁</span>` : ''}${hasNote ? `<span title="Has note" style="font-size:10px;margin-left:2px">📝</span>` : ''}${cidArr.length>1?` <span style="font-size:10px;font-weight:700;background:var(--orange-100);color:var(--orange-700);padding:1px 5px;border-radius:10px">+${cidArr.length-1}</span>`:''}`;
+      const cidHtml = i.systemWide
+        ? `<span style="background:#EDE9FE;color:#5B21B6;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">🌐 System-Wide</span>`
+        : cidArr[0]
+          ? `<span class="client-id" onclick="event.stopPropagation();openClientModal('${cidArr[0]}')" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted">${cidArr[0]}</span>${isRepeat ? `<span title="Repeat client" style="font-size:10px;margin-left:3px">🔁</span>` : ''}${hasNote ? `<span title="Has note" style="font-size:10px;margin-left:2px">📝</span>` : ''}${cidArr.length>1?` <span style="font-size:10px;font-weight:700;background:var(--orange-100);color:var(--orange-700);padding:1px 5px;border-radius:10px">+${cidArr.length-1}</span>`:''}`
+          : `<span style="color:var(--gray-400);font-size:12px">—</span>`;
 
       if (currentView === 'dashboard') {
         return `<tr onclick="viewTicket(${i.id})">
@@ -2198,6 +2207,18 @@ function toggleSidebar() {
 }
 
 // ── Multi Client ID ──
+function toggleSystemWide(checked) {
+  const cidList = document.getElementById('cid-list');
+  const addBtn  = document.getElementById('btn-add-cid');
+  cidList.querySelectorAll('.cid-input').forEach(inp => {
+    inp.disabled = checked;
+    inp.style.opacity = checked ? '0.4' : '1';
+    if (checked) inp.value = '';
+  });
+  addBtn.style.opacity = checked ? '0.4' : '1';
+  addBtn.style.pointerEvents = checked ? 'none' : '';
+}
+
 function addCidRow() {
   const list = document.getElementById('cid-list');
   const row = document.createElement('div');
@@ -2213,6 +2234,8 @@ function openNew() {
   document.getElementById('n-exchange').value='';
   document.getElementById('cid-list').innerHTML =
     `<div class="cid-row"><input type="text" class="cid-input" placeholder="e.g. C-0099"></div>`;
+  const chkSW = document.getElementById('chk-system-wide');
+  if (chkSW) { chkSW.checked = false; toggleSystemWide(false); }
   document.getElementById('add-error-wrap').style.display='none';
   document.querySelectorAll('#n-error-checks input').forEach(c=>c.checked=false);
   clearFile();
@@ -2245,7 +2268,7 @@ async function addTicket() {
   const member = document.getElementById('n-member').value;
   const desc = document.getElementById('n-desc').value.trim();
   const checked = [...document.querySelectorAll('#n-error-checks input:checked')].map(c=>c.value);
-  if(!cids.length){ alert('At least one Client ID is required.'); return; }
+  // Client ID is optional — no validation needed
   if(!member){ alert('Please select a Member ID.'); return; }
   if(!checked.length){ alert('Select at least one error type.'); return; }
   if(!desc){ alert('Please add a description.'); return; }
@@ -2262,12 +2285,13 @@ async function addTicket() {
     }
   }
 
+  const systemWide = document.getElementById('chk-system-wide')?.checked || false;
   const dt = nowStr();
   issues.unshift({
-    oid:genOID(), id:oidCounter, cids, cid:cids[0], member, errors:checked,
+    oid:genOID(), id:oidCounter, cids, cid:cids[0]||null, member, errors:checked,
     exchange:document.getElementById('n-exchange').value,
     descs:[{text:desc, date:dt}], date:dt, status:'open', solution:'', priority:'',
-    attachments,
+    attachments, systemWide,
     attachment: attachments[0] || null  // legacy compat
   });
   _pendingAttachments = [];
