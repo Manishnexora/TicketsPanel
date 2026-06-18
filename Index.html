@@ -381,10 +381,16 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
 <main class="main">
   <div class="page-header">
     <h1 id="view-title">Dashboard <span>· Open Tickets</span></h1>
-    <button class="btn-add" id="btn-create-ticket" onclick="openNew()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Create Ticket
-    </button>
+    <div style="display:flex;gap:8px" id="btn-create-ticket">
+      <button class="btn-add" onclick="openNew('bug')" style="background:#7C3AED">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="9" y1="1" x2="7" y2="3"/><line x1="15" y1="1" x2="17" y2="3"/></svg>
+        Report Bug
+      </button>
+      <button class="btn-add" onclick="openNew()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Create Ticket
+      </button>
+    </div>
   </div>
 
   <!-- STATS -->
@@ -2229,7 +2235,12 @@ function addCidRow() {
   row.querySelector('input').focus();
 }
 
-function openNew() {
+function openNew(mode) {
+  document.getElementById('modal-new').dataset.mode = mode || 'ticket';
+  const isBug = mode === 'bug';
+  document.querySelector('#modal-new h3').textContent = isBug ? '🐛 Report Bug' : 'Create New Ticket';
+  document.querySelector('#modal-new .btn-confirm').textContent = isBug ? 'Report Bug' : 'Create Ticket';
+  document.querySelector('#modal-new .btn-confirm').style.background = isBug ? '#7C3AED' : '';
   document.getElementById('n-desc').value='';
   document.getElementById('n-exchange').value='';
   document.getElementById('cid-list').innerHTML =
@@ -2290,15 +2301,16 @@ async function addTicket() {
   issues.unshift({
     oid:genOID(), id:oidCounter, cids, cid:cids[0]||null, member, errors:checked,
     exchange:document.getElementById('n-exchange').value,
-    descs:[{text:desc, date:dt}], date:dt, status:'open', solution:'', priority:'',
+    descs:[{text:desc, date:dt}], date:dt, status: document.getElementById('modal-new').dataset.mode === 'bug' ? 'bug' : 'open', solution:'', priority:'',
     attachments, systemWide,
     attachment: attachments[0] || null  // legacy compat
   });
   _pendingAttachments = [];
   saveIssues();
   closeModal('modal-new');
-  render();
-  showToast('New ticket added ✓', true);
+  const isBugMode = document.getElementById('modal-new').dataset.mode === 'bug';
+  if (isBugMode) { switchView('bugs'); showToast('Bug reported ✓', true); }
+  else { render(); showToast('New ticket added ✓', true); }
 }
 
 function handleViewSubmit() {
