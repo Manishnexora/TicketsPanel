@@ -541,6 +541,16 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
       <div class="rpt-card-title">Most Frequent Errors</div>
       <div id="rpt-top-errors"></div>
     </div>
+    <!-- Heatmap -->
+    <div class="rpt-card" style="margin-bottom:24px">
+      <div class="rpt-card-title">Ticket Activity Heatmap</div>
+      <div id="rpt-heatmap" style="overflow-x:auto"></div>
+    </div>
+    <!-- Company Reports -->
+    <div class="rpt-card" style="margin-bottom:24px">
+      <div class="rpt-card-title">Company-Level Breakdown</div>
+      <div id="rpt-company-table"></div>
+    </div>
   </div>
 
   <!-- AGENTS VIEW PANEL -->
@@ -914,6 +924,15 @@ td { padding:9px 12px; color:var(--gray-700); vertical-align:middle; }
       <div style="display:flex;flex-direction:column;gap:6px">
         <input type="text" id="pub-comment-name" placeholder="Your name (optional)" style="border:1px solid #FED7AA;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;background:#FFF7ED;color:#1C1917;outline:none">
         <textarea id="pub-comment-text" placeholder="Write a comment…" rows="3" style="border:1px solid #FED7AA;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;background:#FFF7ED;color:#1C1917;outline:none;resize:none"></textarea>
+        <!-- Attachment -->
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;border:1.5px dashed #FED7AA;border-radius:8px;background:#FFF7ED;font-size:12px;color:#9A3412;font-weight:600;transition:border-color .2s" onmouseover="this.style.borderColor='#EA580C'" onmouseout="this.style.borderColor='#FED7AA'">
+          📎 <span>Attach a file <span style="font-weight:400;color:#A8A29E">(image, PDF, doc — max 5 MB)</span></span>
+          <input type="file" id="pub-comment-file" accept="image/*,.pdf,.doc,.docx,.txt,.xlsx,.csv" style="display:none" onchange="updatePubAttachLabel(this)">
+        </label>
+        <div id="pub-attach-label" style="display:none;font-size:11px;color:#78716C;padding:4px 8px;background:#FEF3C7;border-radius:6px;display:flex;align-items:center;gap:6px">
+          <span id="pub-attach-name"></span>
+          <span onclick="clearPubAttach()" style="cursor:pointer;color:#9A3412;font-weight:700;margin-left:auto">✕ Remove</span>
+        </div>
         <button onclick="submitClientComment()" style="background:#EA580C;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Send Comment</button>
       </div>
     </div>
@@ -1954,6 +1973,12 @@ function shareTicket() {
 
 let _pubTicketOID = null;
 
+function attachmentHtml(att, isPublic) {
+  if (!att) return '';
+  const isImg = att.type && att.type.startsWith('image/');
+  if (isImg) return `<img src="${att.data}" alt="${att.name}" style="max-width:100%;max-height:200px;border-radius:6px;margin-top:6px;display:block;cursor:pointer" onclick="window.open(this.src,'_blank')">`;
+  return `<a href="${att.data}" download="${att.name}" style="display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:5px 10px;background:rgba(0,0,0,0.05);border-radius:6px;font-size:11px;color:inherit;text-decoration:none;font-weight:600">📎 ${att.name}</a>`;
+}
 function renderPublicComments(oid) {
   const all = getComments();
   const thread = all[oid] || [];
@@ -1967,24 +1992,57 @@ function renderPublicComments(oid) {
         <span style="font-size:12px;font-weight:700;color:${isAgent?'#5B21B6':'#065F46'}">${isAgent?'🛠 '+c.name:'👤 '+(c.name||'Client')}</span>
         <span style="font-size:10px;color:#A8A29E">${c.date?.slice(0,16)||''}</span>
       </div>
-      <div style="font-size:13px;color:#1C1917">${c.text}</div>
+      ${c.text ? `<div style="font-size:13px;color:#1C1917">${c.text}</div>` : ''}
+      ${attachmentHtml(c.attachment, true)}
     </div>`;
   }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
+function updatePubAttachLabel(input) {
+  const file = input?.files?.[0];
+  const label = document.getElementById('pub-attach-label');
+  const nameEl = document.getElementById('pub-attach-name');
+  if (file && label && nameEl) {
+    nameEl.textContent = '📎 ' + file.name + ' (' + (file.size > 1024*1024 ? (file.size/1024/1024).toFixed(1)+'MB' : Math.round(file.size/1024)+'KB') + ')';
+    label.style.display = 'flex';
+  }
+}
+function clearPubAttach() {
+  const input = document.getElementById('pub-comment-file');
+  if (input) input.value = '';
+  const label = document.getElementById('pub-attach-label');
+  if (label) label.style.display = 'none';
+}
 function submitClientComment() {
   const name = document.getElementById('pub-comment-name')?.value.trim() || 'Client';
   const text = document.getElementById('pub-comment-text')?.value.trim();
-  if (!text) return;
+  const fileInput = document.getElementById('pub-comment-file');
+  const file = fileInput?.files?.[0];
+  if (!text && !file) return;
   const oid = _pubTicketOID;
   if (!oid) return;
-  const all = getComments();
-  if (!all[oid]) all[oid] = [];
-  all[oid].push({ from:'client', name, text, date: new Date().toISOString().slice(0,16).replace('T',' ') });
-  saveComments(all);
-  document.getElementById('pub-comment-text').value = '';
-  renderPublicComments(oid);
+
+  const doSave = (attachment) => {
+    const all = getComments();
+    if (!all[oid]) all[oid] = [];
+    const entry = { from:'client', name, text: text||'', date: new Date().toISOString().slice(0,16).replace('T',' ') };
+    if (attachment) entry.attachment = attachment;
+    all[oid].push(entry);
+    saveComments(all);
+    document.getElementById('pub-comment-text').value = '';
+    clearPubAttach();
+    renderPublicComments(oid);
+  };
+
+  if (file) {
+    if (file.size > 5 * 1024 * 1024) { alert('File too large. Maximum size is 5 MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = e => doSave({ name: file.name, type: file.type, data: e.target.result });
+    reader.readAsDataURL(file);
+  } else {
+    doSave(null);
+  }
 }
 
 function renderAgentComments(oid) {
@@ -2000,7 +2058,8 @@ function renderAgentComments(oid) {
         <span style="font-size:11px;font-weight:700;color:${isAgent?'#5B21B6':'var(--orange-700)'}">${isAgent?'🛠 '+c.name:'👤 '+(c.name||'Client')}</span>
         <span style="font-size:10px;color:var(--gray-400)">${c.date?.slice(0,16)||''}</span>
       </div>
-      <div style="font-size:12px;color:var(--gray-700)">${c.text}</div>
+      ${c.text ? `<div style="font-size:12px;color:var(--gray-700)">${c.text}</div>` : ''}
+      ${attachmentHtml(c.attachment, false)}
     </div>`;
   }).join('');
   el.scrollTop = el.scrollHeight;
@@ -2577,6 +2636,152 @@ function getReportDateRange() {
   return { from, to };
 }
 
+function renderHeatmap(pool) {
+  const el = document.getElementById('rpt-heatmap');
+  if (!el) return;
+
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 364);
+  // Align to Monday
+  const dayOfWeek = (startDate.getDay() + 6) % 7; // 0=Mon
+  startDate.setDate(startDate.getDate() - dayOfWeek);
+
+  // Count tickets per day
+  const counts = {};
+  pool.forEach(i => {
+    const d = i.date ? i.date.slice(0, 10) : null;
+    if (d) counts[d] = (counts[d] || 0) + 1;
+  });
+
+  const maxCount = Math.max(...Object.values(counts), 1);
+  const weeks = [];
+  const current = new Date(startDate);
+  let monthLabels = [];
+  let weekIdx = 0;
+
+  while (current <= today) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      if (current > today) { week.push(null); current.setDate(current.getDate() + 1); continue; }
+      const dateStr = current.toISOString().slice(0, 10);
+      const count = counts[dateStr] || 0;
+      const intensity = count === 0 ? 0 : count <= 2 ? 1 : count <= 5 ? 2 : count <= 9 ? 3 : 4;
+      const colors = ['#FFEDD5','#FED7AA','#FB923C','#EA580C','#9A3412'];
+      week.push({ dateStr, count, color: colors[intensity] });
+      if (d === 0) {
+        const mn = current.toLocaleDateString('en', { month: 'short' });
+        if (!monthLabels.length || monthLabels[monthLabels.length-1].label !== mn) {
+          monthLabels.push({ label: mn, col: weekIdx });
+        }
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    weeks.push(week);
+    weekIdx++;
+  }
+
+  const days = ['Mon','','Wed','','Fri','',''];
+  const cellSize = 13;
+  const gap = 2;
+  const leftPad = 28;
+  const topPad = 20;
+  const width = leftPad + weeks.length * (cellSize + gap);
+  const height = topPad + 7 * (cellSize + gap) + 20;
+
+  let svg = `<svg width="${width}" height="${height}" style="font-family:inherit">`;
+
+  // Month labels
+  monthLabels.forEach(m => {
+    const x = leftPad + m.col * (cellSize + gap);
+    svg += `<text x="${x}" y="12" font-size="10" fill="#9A3412" font-weight="600">${m.label}</text>`;
+  });
+
+  // Day labels
+  days.forEach((d, i) => {
+    if (d) svg += `<text x="0" y="${topPad + i * (cellSize + gap) + cellSize - 2}" font-size="9" fill="#78716C">${d}</text>`;
+  });
+
+  // Cells
+  weeks.forEach((week, wi) => {
+    week.forEach((cell, di) => {
+      if (!cell) return;
+      const x = leftPad + wi * (cellSize + gap);
+      const y = topPad + di * (cellSize + gap);
+      svg += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" fill="${cell.color}" stroke="#FED7AA" stroke-width="0.5">
+        <title>${cell.dateStr}: ${cell.count} ticket${cell.count !== 1 ? 's' : ''}</title>
+      </rect>`;
+    });
+  });
+
+  // Legend
+  const lx = width - 100;
+  const ly = height - 16;
+  svg += `<text x="${lx - 28}" y="${ly + 10}" font-size="9" fill="#78716C">Less</text>`;
+  ['#FFEDD5','#FED7AA','#FB923C','#EA580C','#9A3412'].forEach((c, i) => {
+    svg += `<rect x="${lx + i * (cellSize + gap)}" y="${ly}" width="${cellSize}" height="${cellSize}" rx="2" fill="${c}" stroke="#FED7AA" stroke-width="0.5"/>`;
+  });
+  svg += `<text x="${lx + 5 * (cellSize + gap) + 2}" y="${ly + 10}" font-size="9" fill="#78716C">More</text>`;
+
+  svg += '</svg>';
+  el.innerHTML = svg;
+}
+
+function renderCompanyReport(pool) {
+  const el = document.getElementById('rpt-company-table');
+  if (!el) return;
+  const companies = getCompanies();
+  if (!companies.length) { el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;text-align:center;padding:20px">No companies added yet.</div>'; return; }
+
+  const rows = companies.map(co => {
+    const tickets = pool.filter(i => i.member === co.mid);
+    const total = tickets.length;
+    const open = tickets.filter(i => i.status === 'open').length;
+    const inprog = tickets.filter(i => i.status === 'in-progress').length;
+    const closed = tickets.filter(i => i.status === 'closed').length;
+    const bugs = tickets.filter(i => ['bug','new-bug','old-bug','manually-cleared'].includes(i.status) && !i.bugResolved).length;
+    const resolved = tickets.filter(i => i.status === 'bug-solved' || (i.status === 'manually-cleared' && i.bugResolved)).length;
+    // Avg close time in days
+    const closedTickets = tickets.filter(i => i.status === 'closed' && i.date && i.descs?.length > 1);
+    let avgClose = '—';
+    if (closedTickets.length) {
+      const totalMs = closedTickets.reduce((sum, t) => {
+        const start = new Date(t.date).getTime();
+        const end = new Date(t.descs[t.descs.length-1].date).getTime();
+        return sum + Math.max(0, end - start);
+      }, 0);
+      const days = (totalMs / closedTickets.length / 86400000).toFixed(1);
+      avgClose = `${days}d`;
+    }
+    return { co, total, open, inprog, closed, bugs, resolved, avgClose };
+  }).sort((a, b) => b.total - a.total);
+
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:var(--orange-50);border-bottom:2px solid var(--orange-200)">
+      <th style="padding:10px 12px;text-align:left;color:var(--gray-600);font-weight:600">Company</th>
+      <th style="padding:10px 12px;text-align:left;color:var(--gray-600);font-weight:600">Member ID</th>
+      <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Total</th>
+      <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Open</th>
+      <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">In Progress</th>
+      <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Closed</th>
+      <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Active Bugs</th>
+      <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Resolved</th>
+      <th style="padding:10px 12px;text-align:center;color:var(--gray-600);font-weight:600">Avg Close</th>
+    </tr></thead>
+    <tbody>${rows.map((r, i) => `<tr style="border-bottom:1px solid var(--orange-100);background:${i%2===0?'#fff':'var(--orange-50)'}">
+      <td style="padding:9px 12px;font-weight:600;color:var(--gray-700)">${r.co.name}</td>
+      <td style="padding:9px 12px"><span class="member-pill">${r.co.mid}</span></td>
+      <td style="padding:9px 12px;text-align:center;font-weight:700;color:var(--orange-700)">${r.total}</td>
+      <td style="padding:9px 12px;text-align:center;color:#92400E">${r.open}</td>
+      <td style="padding:9px 12px;text-align:center;color:#1E40AF">${r.inprog}</td>
+      <td style="padding:9px 12px;text-align:center;color:#065F46">${r.closed}</td>
+      <td style="padding:9px 12px;text-align:center;color:#991B1B">${r.bugs}</td>
+      <td style="padding:9px 12px;text-align:center;color:#065F46">${r.resolved}</td>
+      <td style="padding:9px 12px;text-align:center;color:var(--gray-500)">${r.avgClose}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
 function renderReports() {
   if (currentView !== 'reports') return;
   const { from, to } = getReportDateRange();
@@ -2674,6 +2879,9 @@ function renderReports() {
           <div style="width:30px;text-align:right;font-size:12px;font-weight:700;color:var(--orange-600)">${cnt}</div>
         </div>`).join('')
     : '<div style="color:var(--gray-400);font-size:13px">No error data in this period</div>';
+
+  renderHeatmap(issues);
+  renderCompanyReport(issues);
 }
 
 function printReport() {
