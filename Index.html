@@ -2604,7 +2604,7 @@ function closeModal(id) {
   if(id==='modal-action'){ actionTarget=null; actionMode=null; }
   if(id==='modal-new'){ _pendingAttachments=[]; _renderPendingFiles(); document.getElementById('n-file').value=''; }
 }
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('open'); }));
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){ if(e.target===this && !['modal-new','modal-view'].includes(this.id)) this.classList.remove('open'); }));
 
 // ── REPORTS ──
 let _reportRange = 'week';
